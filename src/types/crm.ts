@@ -27,6 +27,31 @@ export interface Contact {
   priority: Priority;
   notes: string;
   daysInStage: number;
+  discoveryForm: DiscoveryFormStatus;
+  auditReports: AuditReport[];
+}
+
+export type DiscoveryFormState = "not-sent" | "sent" | "completed";
+
+export interface DiscoveryFormStatus {
+  state: DiscoveryFormState;
+  sentDate?: string;
+  completedDate?: string;
+  responses?: {
+    companySize: string;
+    currentTools: string;
+    painPoints: string;
+    monthlyBudget: string;
+  };
+}
+
+export interface AuditReport {
+  id: string;
+  name: string;
+  uploadDate: string;
+  fileSize: string;
+  fileType: "pdf" | "docx" | "doc";
+  url?: string;
 }
 
 export interface Deal extends Contact {}

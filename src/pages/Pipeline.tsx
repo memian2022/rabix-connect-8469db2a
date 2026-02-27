@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { contacts, pipelineStages } from "@/data/mockData";
-import { getChannelIcon, getChannelColorClass, getServiceLabel, getInitials, getChannelBgClass } from "@/lib/crm-utils";
-import { ArrowRight, CalendarDays, Pencil, Search } from "lucide-react";
+import { getChannelIcon, getChannelColorClass, getServiceLabel } from "@/lib/crm-utils";
+import { ArrowRight, CalendarDays, Pencil, Search, ClipboardList, FileText } from "lucide-react";
 import type { Channel } from "@/types/crm";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const channelFilters: { label: string; value: Channel | "all" }[] = [
   { label: "All", value: "all" },
@@ -11,6 +12,18 @@ const channelFilters: { label: string; value: Channel | "all" }[] = [
   { label: "Email", value: "email" },
   { label: "Instagram", value: "instagram" },
 ];
+
+const formStateColor: Record<string, string> = {
+  "not-sent": "text-muted-foreground/40",
+  sent: "text-primary",
+  completed: "text-success",
+};
+
+const formStateTooltip: Record<string, string> = {
+  "not-sent": "Discovery form: Not sent",
+  sent: "Discovery form: Sent - Awaiting response",
+  completed: "Discovery form: Completed",
+};
 
 export default function Pipeline() {
   const [filter, setFilter] = useState<Channel | "all">("all");
@@ -87,10 +100,11 @@ export default function Pipeline() {
                 <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[calc(100vh-260px)]">
                   {stageContacts.map((contact) => {
                     const ChannelIcon = getChannelIcon(contact.channel);
+                    const hasReport = contact.auditReports.length > 0;
                     return (
                       <div
                         key={contact.id}
-                        className={`bg-card border border-border rounded p-4 hover:shadow-sm transition-shadow cursor-pointer border-l-[3px]`}
+                        className="bg-card border border-border rounded p-4 hover:shadow-sm transition-shadow cursor-pointer border-l-[3px] group"
                         style={{
                           borderLeftColor: `hsl(var(--channel-${contact.channel}))`,
                         }}
@@ -120,10 +134,31 @@ export default function Pipeline() {
                         </p>
 
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] text-muted-foreground">
-                            {contact.daysInStage}d in stage
-                          </span>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] text-muted-foreground">
+                              {contact.daysInStage}d in stage
+                            </span>
+                            {/* Document status indicators */}
+                            <div className="flex items-center gap-1.5 ml-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <ClipboardList className={`h-3 w-3 ${formStateColor[contact.discoveryForm.state]}`} />
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="text-xs">
+                                  {formStateTooltip[contact.discoveryForm.state]}
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <FileText className={`h-3 w-3 ${hasReport ? "text-success" : "text-muted-foreground/40"}`} />
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="text-xs">
+                                  {hasReport ? `${contact.auditReports.length} audit report(s) attached` : "No audit report yet"}
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </div>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button className="p-1 hover:bg-accent rounded" title="Next stage">
                               <ArrowRight className="h-3 w-3 text-muted-foreground" />
                             </button>
