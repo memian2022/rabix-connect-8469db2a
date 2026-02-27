@@ -6,6 +6,7 @@ import {
   CalendarDays,
   MessageSquare,
   BarChart3,
+  NotebookPen,
   Settings,
 } from "lucide-react";
 
@@ -16,6 +17,7 @@ const navItems = [
   { title: "Calendar", path: "/calendar", icon: CalendarDays },
   { title: "Outreach", path: "/outreach", icon: MessageSquare },
   { title: "Reports", path: "/reports", icon: BarChart3 },
+  { title: "Workspace", path: "/workspace", icon: NotebookPen },
   { title: "Settings", path: "/settings", icon: Settings },
 ];
 
