@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { meetings } from "@/data/mockData";
+import { useMeetings } from "@/hooks/useSupabase";
 import { getChannelIcon, getChannelColorClass } from "@/lib/crm-utils";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
@@ -13,6 +13,7 @@ const meetingTypeColors: Record<string, string> = {
 };
 
 export default function CalendarPage() {
+  const { data: meetings = [], isLoading } = useMeetings();
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 1, 1)); // Feb 2026
 
   const monthStart = startOfMonth(currentMonth);

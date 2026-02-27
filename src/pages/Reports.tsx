@@ -1,4 +1,4 @@
-import { contacts } from "@/data/mockData";
+import { useContacts } from "@/hooks/useSupabase";
 import {
   BarChart,
   Bar,
@@ -38,14 +38,15 @@ const channelData = [
   { name: "Instagram", value: 5, fill: "hsl(340, 75%, 54%)" },
 ];
 
-const serviceData = [
-  { name: "AI Audit", count: contacts.filter((c) => c.serviceInterest === "audit").length },
-  { name: "AI Training", count: contacts.filter((c) => c.serviceInterest === "training").length },
-  { name: "Custom Systems", count: contacts.filter((c) => c.serviceInterest === "custom").length },
-  { name: "TBD", count: contacts.filter((c) => c.serviceInterest === "tbd").length },
-];
-
 export default function Reports() {
+  const { data: contacts = [] } = useContacts();
+
+  const serviceData = [
+    { name: "AI Audit", count: contacts.filter((c) => c.serviceInterest === "audit").length },
+    { name: "AI Training", count: contacts.filter((c) => c.serviceInterest === "training").length },
+    { name: "Custom Systems", count: contacts.filter((c) => c.serviceInterest === "custom").length },
+    { name: "TBD", count: contacts.filter((c) => c.serviceInterest === "tbd").length },
+  ];
   return (
     <div className="space-y-6">
       {/* Stats */}

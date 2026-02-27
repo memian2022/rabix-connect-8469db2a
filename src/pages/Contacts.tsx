@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { contacts } from "@/data/mockData";
+import { useContacts } from "@/hooks/useSupabase";
 import {
   getChannelIcon,
   getChannelColorClass,
@@ -33,6 +33,7 @@ const formStatusBadge: Record<string, { label: string; className: string }> = {
 };
 
 export default function Contacts() {
+  const { data: contacts = [], isLoading } = useContacts();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ContactStatus | "all">("all");
   const [selected, setSelected] = useState<Contact | null>(null);

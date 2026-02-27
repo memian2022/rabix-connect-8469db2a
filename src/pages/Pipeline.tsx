@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { contacts, pipelineStages } from "@/data/mockData";
+import { pipelineStages } from "@/data/mockData";
+import { useContacts } from "@/hooks/useSupabase";
 import { getChannelIcon, getChannelColorClass, getServiceLabel } from "@/lib/crm-utils";
 import { ArrowRight, CalendarDays, Pencil, Search, ClipboardList, FileText } from "lucide-react";
 import type { Channel } from "@/types/crm";
@@ -26,6 +27,7 @@ const formStateTooltip: Record<string, string> = {
 };
 
 export default function Pipeline() {
+  const { data: contacts = [], isLoading } = useContacts();
   const [filter, setFilter] = useState<Channel | "all">("all");
   const [search, setSearch] = useState("");
 
