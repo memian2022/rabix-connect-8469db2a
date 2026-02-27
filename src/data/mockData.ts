@@ -1,4 +1,4 @@
-import { Contact, Deal, Activity, Meeting, OutreachMessage, MessageTemplate } from "@/types/crm";
+import { Contact, Deal, Activity, Meeting, OutreachMessage, MessageTemplate, DiscoveryFormStatus, AuditReport } from "@/types/crm";
 
 export const contacts: Contact[] = [
   {
@@ -22,6 +22,8 @@ export const contacts: Contact[] = [
     priority: "high",
     notes: "Very interested in AI training for their team of 20+",
     daysInStage: 3,
+    discoveryForm: { state: "sent", sentDate: "2026-02-24" },
+    auditReports: [],
   },
   {
     id: "2",
@@ -44,6 +46,8 @@ export const contacts: Contact[] = [
     priority: "medium",
     notes: "Replied to DM, interested in AI audit",
     daysInStage: 1,
+    discoveryForm: { state: "not-sent" },
+    auditReports: [],
   },
   {
     id: "3",
@@ -66,6 +70,8 @@ export const contacts: Contact[] = [
     priority: "medium",
     notes: "Sent connection request + intro message",
     daysInStage: 3,
+    discoveryForm: { state: "not-sent" },
+    auditReports: [],
   },
   {
     id: "4",
@@ -88,6 +94,8 @@ export const contacts: Contact[] = [
     priority: "high",
     notes: "Discovery call went great. Needs proposal for 3-day workshop.",
     daysInStage: 4,
+    discoveryForm: { state: "completed", sentDate: "2026-02-18", completedDate: "2026-02-20", responses: { companySize: "50-100 employees", currentTools: "Microsoft Suite, Slack, basic spreadsheets", painPoints: "Manual reporting, slow data processing, no automation", monthlyBudget: "$8,000 - $12,000" } },
+    auditReports: [{ id: "r1", name: "Initial AI Readiness Assessment", uploadDate: "2026-02-21", fileSize: "2.4 MB", fileType: "pdf" }],
   },
   {
     id: "5",
@@ -110,6 +118,11 @@ export const contacts: Contact[] = [
     priority: "low",
     notes: "Signed contract for custom AI system build.",
     daysInStage: 7,
+    discoveryForm: { state: "completed", sentDate: "2026-02-05", completedDate: "2026-02-07", responses: { companySize: "200+ employees", currentTools: "AWS, Python, internal dashboards", painPoints: "Scaling ML pipelines, model deployment bottlenecks", monthlyBudget: "$15,000 - $25,000" } },
+    auditReports: [
+      { id: "r2", name: "Full AI Infrastructure Audit", uploadDate: "2026-02-10", fileSize: "5.1 MB", fileType: "pdf" },
+      { id: "r3", name: "Implementation Roadmap", uploadDate: "2026-02-15", fileSize: "1.8 MB", fileType: "docx" },
+    ],
   },
   {
     id: "6",
@@ -132,6 +145,8 @@ export const contacts: Contact[] = [
     priority: "low",
     notes: "Sent intro message on LinkedIn",
     daysInStage: 1,
+    discoveryForm: { state: "not-sent" },
+    auditReports: [],
   },
   {
     id: "7",
@@ -154,6 +169,8 @@ export const contacts: Contact[] = [
     priority: "high",
     notes: "Proposal sent for AI training program. Awaiting response.",
     daysInStage: 5,
+    discoveryForm: { state: "completed", sentDate: "2026-02-15", completedDate: "2026-02-17", responses: { companySize: "30-50 employees", currentTools: "Google Workspace, Notion, Zapier", painPoints: "Team lacks AI skills, want to upskill engineers", monthlyBudget: "$8,000 - $10,000" } },
+    auditReports: [],
   },
   {
     id: "8",
@@ -176,6 +193,8 @@ export const contacts: Contact[] = [
     priority: "low",
     notes: "Budget not approved. May revisit Q3.",
     daysInStage: 12,
+    discoveryForm: { state: "completed", sentDate: "2026-02-01", completedDate: "2026-02-03", responses: { companySize: "500+ employees", currentTools: "SAP, Oracle, custom ERP", painPoints: "Legacy system migration, AI strategy unclear", monthlyBudget: "$20,000+" } },
+    auditReports: [{ id: "r4", name: "AI Strategy Assessment", uploadDate: "2026-02-08", fileSize: "3.2 MB", fileType: "pdf" }],
   },
   {
     id: "9",
@@ -198,6 +217,8 @@ export const contacts: Contact[] = [
     priority: "medium",
     notes: "Replied positively to outreach. Need to schedule discovery.",
     daysInStage: 2,
+    discoveryForm: { state: "not-sent" },
+    auditReports: [],
   },
   {
     id: "10",
@@ -220,6 +241,8 @@ export const contacts: Contact[] = [
     priority: "low",
     notes: "AI Audit completed. Happy client.",
     daysInStage: 9,
+    discoveryForm: { state: "completed", sentDate: "2026-01-20", completedDate: "2026-01-22", responses: { companySize: "10-20 employees", currentTools: "OpenAI API, Hugging Face, custom scripts", painPoints: "Need structured AI processes, audit of current usage", monthlyBudget: "$3,000 - $5,000" } },
+    auditReports: [{ id: "r5", name: "AI Usage Audit Report - Feb 2026", uploadDate: "2026-02-18", fileSize: "4.7 MB", fileType: "pdf" }],
   },
 ];
 
