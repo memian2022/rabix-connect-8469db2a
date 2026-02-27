@@ -2,6 +2,27 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { Contact, Activity, Meeting, OutreachMessage, MessageTemplate } from '@/types/crm'
 
+async function ensureSession() {
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession()
+
+  if (sessionError) throw sessionError
+  if (session) return session
+
+  const { data, error } = await supabase.auth.signInAnonymously()
+  if (error) {
+    throw new Error('Database access is blocked by security rules. Enable anonymous auth or sign in first.')
+  }
+
+  if (!data.session) {
+    throw new Error('Unable to create a session for database access.')
+  }
+
+  return data.session
+}
+
 function mapContact(row: any): Contact {
   return {
     id: row.id,
@@ -87,6 +108,8 @@ export function useContacts() {
   return useQuery({
     queryKey: ['contacts'],
     queryFn: async () => {
+      await ensureSession()
+
       const { data, error } = await supabase
         .from('contacts')
         .select('*')
@@ -101,6 +124,8 @@ export function useCreateContact() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (contact: Omit<Contact, 'id'>) => {
+      await ensureSession()
+
       const { data, error } = await supabase
         .from('contacts')
         .insert({
@@ -138,6 +163,8 @@ export function useUpdateContact() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Contact> }) => {
+      await ensureSession()
+
       const dbUpdates: any = {}
       if (updates.firstName !== undefined) dbUpdates.first_name = updates.firstName
       if (updates.lastName !== undefined) dbUpdates.last_name = updates.lastName
@@ -168,7 +195,7 @@ export function useUpdateContact() {
       if (error) throw error
       return mapContact(data)
     },
-    onSuccess: (_, { id }) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contacts'] })
     },
   })
@@ -178,6 +205,8 @@ export function useDeleteContact() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
+      await ensureSession()
+
       const { error } = await supabase.from('contacts').delete().eq('id', id)
       if (error) throw error
     },
@@ -189,6 +218,8 @@ export function useActivities(limit = 20) {
   return useQuery({
     queryKey: ['activities', limit],
     queryFn: async () => {
+      await ensureSession()
+
       const { data, error } = await supabase
         .from('activities')
         .select('*')
@@ -204,6 +235,8 @@ export function useCreateActivity() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (activity: Omit<Activity, 'id' | 'timeAgo'>) => {
+      await ensureSession()
+
       const { data, error } = await supabase
         .from('activities')
         .insert({
@@ -228,6 +261,8 @@ export function useMeetings() {
   return useQuery({
     queryKey: ['meetings'],
     queryFn: async () => {
+      await ensureSession()
+
       const { data, error } = await supabase
         .from('meetings')
         .select('*')
@@ -242,6 +277,8 @@ export function useCreateMeeting() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (meeting: Omit<Meeting, 'id'>) => {
+      await ensureSession()
+
       const { data, error } = await supabase
         .from('meetings')
         .insert({
@@ -268,6 +305,8 @@ export function useOutreachMessages() {
   return useQuery({
     queryKey: ['outreach_messages'],
     queryFn: async () => {
+      await ensureSession()
+
       const { data, error } = await supabase
         .from('outreach_messages')
         .select('*')
@@ -282,6 +321,8 @@ export function useMessageTemplates() {
   return useQuery({
     queryKey: ['message_templates'],
     queryFn: async () => {
+      await ensureSession()
+
       const { data, error } = await supabase
         .from('message_templates')
         .select('*')
@@ -297,6 +338,8 @@ export function usePipelineCounts() {
   return useQuery({
     queryKey: ['pipeline_counts'],
     queryFn: async () => {
+      await ensureSession()
+
       const { data, error } = await supabase
         .from('contacts')
         .select('pipeline_stage')
@@ -309,3 +352,4 @@ export function usePipelineCounts() {
     },
   })
 }
+
