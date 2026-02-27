@@ -7,24 +7,18 @@ import {
   Clock,
 } from "lucide-react";
 import { pipelineStages } from "@/data/mockData";
-import { useContacts, useActivities, useMeetings, usePipelineCounts } from "@/hooks/useSupabase";
-import { getChannelIcon, getChannelColorClass, getServiceLabel } from "@/lib/crm-utils";
+import { useContacts, useActivities, useMeetings, usePipelineCounts, useOutreachMessages } from "@/hooks/useSupabase";
+import { getChannelIcon, getChannelColorClass } from "@/lib/crm-utils";
 import { Link } from "react-router-dom";
-
-const stats = [
-  { label: "Total Outreach", value: "47", sub: "+12 this week", subColor: "text-success", icon: Send },
-  { label: "Replies", value: "13", sub: "27% response rate", subColor: "text-muted-foreground", icon: MessageCircle },
-  { label: "Calls Booked", value: "5", sub: "2 this week", subColor: "text-success", icon: Phone },
-  { label: "Closed", value: "2", sub: "$3,200 revenue", subColor: "text-primary", icon: CheckCircle },
-];
 
 export default function Dashboard() {
   const { data: contacts = [], isLoading: loadingContacts } = useContacts();
-  const { data: activities = [], isLoading: loadingActivities } = useActivities(7);
-  const { data: meetings = [], isLoading: loadingMeetings } = useMeetings();
+  const { data: activities = [] } = useActivities(7);
+  const { data: meetings = [] } = useMeetings();
   const { data: pipelineCounts = {} } = usePipelineCounts();
+  const { data: outreachMessages = [] } = useOutreachMessages();
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split("T")[0];
   const todayMeetings = meetings.filter((m) => m.date === today);
 
   const followUps = contacts
@@ -38,7 +32,20 @@ export default function Dashboard() {
   }));
   const totalInPipeline = contacts.length;
 
-  if (loadingContacts || loadingActivities || loadingMeetings) {
+  const totalOutreach = outreachMessages.length;
+  const replies = outreachMessages.filter((m) => m.status === "replied").length;
+  const responseRate = totalOutreach > 0 ? Math.round((replies / totalOutreach) * 100) : 0;
+  const callsBooked = contacts.filter((c) => c.pipelineStage === "call-booked").length;
+  const closedWon = contacts.filter((c) => c.pipelineStage === "closed-won").length;
+
+  const stats = [
+    { label: "Total Outreach", value: String(totalOutreach), sub: `${contacts.filter(c => c.pipelineStage === "outreach-sent").length} awaiting reply`, subColor: "text-success", icon: Send },
+    { label: "Replies", value: String(replies), sub: `${responseRate}% response rate`, subColor: "text-muted-foreground", icon: MessageCircle },
+    { label: "Calls Booked", value: String(callsBooked), sub: "Pending discovery calls", subColor: "text-success", icon: Phone },
+    { label: "Closed", value: String(closedWon), sub: "Won deals", subColor: "text-primary", icon: CheckCircle },
+  ];
+
+  if (loadingContacts) {
     return <div className="flex items-center justify-center py-20 text-muted-foreground">Loading...</div>;
   }
 
@@ -147,65 +154,73 @@ export default function Dashboard() {
         {/* Recent Activity */}
         <div className="col-span-3 bg-card border border-border rounded-lg p-6">
           <h3 className="section-title mb-5">Recent Activity</h3>
-          <div className="space-y-3">
-            {activities.slice(0, 7).map((activity) => {
-              const Icon = getChannelIcon(activity.channel);
-              return (
-                <div key={activity.id} className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-accent shrink-0`}>
-                    <Icon className={`h-3.5 w-3.5 ${getChannelColorClass(activity.channel)}`} />
+          {activities.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">No recent activity yet. Add contacts and start outreach.</p>
+          ) : (
+            <div className="space-y-3">
+              {activities.slice(0, 7).map((activity) => {
+                const Icon = getChannelIcon(activity.channel);
+                return (
+                  <div key={activity.id} className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-accent shrink-0`}>
+                      <Icon className={`h-3.5 w-3.5 ${getChannelColorClass(activity.channel)}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-foreground truncate">
+                        {activity.description}{" "}
+                        <span className="font-medium">{activity.contactName}</span>
+                        <span className="text-muted-foreground"> · {activity.company}</span>
+                      </p>
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {activity.timeAgo}
+                    </span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-foreground truncate">
-                      {activity.description}{" "}
-                      <span className="font-medium">{activity.contactName}</span>
-                      <span className="text-muted-foreground"> · {activity.company}</span>
-                    </p>
-                  </div>
-                  <span className="text-xs text-muted-foreground shrink-0">
-                    {activity.timeAgo}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Follow-ups Due */}
         <div className="col-span-2 bg-card border border-border rounded-lg p-6">
           <h3 className="section-title mb-5">Follow-ups Due</h3>
-          <div className="space-y-3">
-            {followUps.map((contact) => {
-              const isOverdue = contact.followUpDate < today;
-              const isToday = contact.followUpDate === today;
-              return (
-                <div
-                  key={contact.id}
-                  className="flex items-center justify-between p-3 bg-accent/50 rounded-lg"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {contact.firstName} {contact.lastName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{contact.company}</p>
+          {followUps.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">No follow-ups due.</p>
+          ) : (
+            <div className="space-y-3">
+              {followUps.map((contact) => {
+                const isOverdue = contact.followUpDate < today;
+                const isToday = contact.followUpDate === today;
+                return (
+                  <div
+                    key={contact.id}
+                    className="flex items-center justify-between p-3 bg-accent/50 rounded-lg"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {contact.firstName} {contact.lastName}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{contact.company}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-xs font-medium px-2 py-0.5 rounded ${
+                          isOverdue
+                            ? "bg-destructive/10 text-destructive"
+                            : isToday
+                            ? "bg-warning/10 text-warning"
+                            : "bg-success/10 text-success"
+                        }`}
+                      >
+                        {isOverdue ? "Overdue" : isToday ? "Today" : contact.followUpDate}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded ${
-                        isOverdue
-                          ? "bg-destructive/10 text-destructive"
-                          : isToday
-                          ? "bg-warning/10 text-warning"
-                          : "bg-success/10 text-success"
-                      }`}
-                    >
-                      {isOverdue ? "Overdue" : isToday ? "Today" : contact.followUpDate}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
