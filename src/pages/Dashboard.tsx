@@ -62,21 +62,27 @@ export default function Dashboard() {
             </Link>
           </div>
           <div className="space-y-3">
-            {stageCounts.map((stage) => (
-              <div key={stage.id} className="flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full bg-${stage.color}`} />
-                <span className="text-sm text-foreground w-32">{stage.label}</span>
-                <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className={`h-full bg-${stage.color} rounded-full transition-all`}
-                    style={{ width: `${totalInPipeline ? (stage.count / totalInPipeline) * 100 : 0}%` }}
-                  />
+            {stageCounts.map((stage) => {
+              const color = `hsl(var(--${stage.color}))`;
+              return (
+                <div key={stage.id} className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                  <span className="text-sm text-foreground w-32">{stage.label}</span>
+                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        backgroundColor: color,
+                        width: `${totalInPipeline ? (stage.count / totalInPipeline) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-sm font-semibold text-foreground w-6 text-right">
+                    {stage.count}
+                  </span>
                 </div>
-                <span className="text-sm font-semibold text-foreground w-6 text-right">
-                  {stage.count}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
