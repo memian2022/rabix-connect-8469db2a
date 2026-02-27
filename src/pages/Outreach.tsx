@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { outreachMessages, messageTemplates } from "@/data/mockData";
+import { useOutreachMessages, useMessageTemplates } from "@/hooks/useSupabase";
 import { getChannelIcon, getChannelColorClass } from "@/lib/crm-utils";
 import { Search, Copy, Pencil, Trash2 } from "lucide-react";
 
@@ -11,6 +11,8 @@ const statusColors: Record<string, string> = {
 };
 
 export default function Outreach() {
+  const { data: outreachMessages = [] } = useOutreachMessages();
+  const { data: messageTemplates = [] } = useMessageTemplates();
   const [tab, setTab] = useState<"sent" | "templates">("sent");
   const [search, setSearch] = useState("");
 

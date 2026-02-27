@@ -6,7 +6,8 @@ import {
   ArrowUpRight,
   Clock,
 } from "lucide-react";
-import { contacts, activities, meetings, pipelineStages } from "@/data/mockData";
+import { pipelineStages } from "@/data/mockData";
+import { useContacts, useActivities, useMeetings, usePipelineCounts } from "@/hooks/useSupabase";
 import { getChannelIcon, getChannelColorClass, getServiceLabel } from "@/lib/crm-utils";
 import { Link } from "react-router-dom";
 
@@ -17,19 +18,29 @@ const stats = [
   { label: "Closed", value: "2", sub: "$3,200 revenue", subColor: "text-primary", icon: CheckCircle },
 ];
 
-const followUps = contacts
-  .filter((c) => c.followUpDate && c.pipelineStage !== "closed-won" && c.pipelineStage !== "closed-lost")
-  .sort((a, b) => a.followUpDate.localeCompare(b.followUpDate))
-  .slice(0, 5);
-
-const todayMeetings = meetings.filter((m) => m.date === "2026-02-27");
-
 export default function Dashboard() {
+  const { data: contacts = [], isLoading: loadingContacts } = useContacts();
+  const { data: activities = [], isLoading: loadingActivities } = useActivities(7);
+  const { data: meetings = [], isLoading: loadingMeetings } = useMeetings();
+  const { data: pipelineCounts = {} } = usePipelineCounts();
+
+  const today = new Date().toISOString().split('T')[0];
+  const todayMeetings = meetings.filter((m) => m.date === today);
+
+  const followUps = contacts
+    .filter((c) => c.followUpDate && c.pipelineStage !== "closed-won" && c.pipelineStage !== "closed-lost")
+    .sort((a, b) => a.followUpDate.localeCompare(b.followUpDate))
+    .slice(0, 5);
+
   const stageCounts = pipelineStages.map((stage) => ({
     ...stage,
-    count: contacts.filter((c) => c.pipelineStage === stage.id).length,
+    count: pipelineCounts[stage.id] ?? 0,
   }));
   const totalInPipeline = contacts.length;
+
+  if (loadingContacts || loadingActivities || loadingMeetings) {
+    return <div className="flex items-center justify-center py-20 text-muted-foreground">Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -165,8 +176,8 @@ export default function Dashboard() {
           <h3 className="section-title mb-5">Follow-ups Due</h3>
           <div className="space-y-3">
             {followUps.map((contact) => {
-              const isOverdue = contact.followUpDate < "2026-02-27";
-              const isToday = contact.followUpDate === "2026-02-27";
+              const isOverdue = contact.followUpDate < today;
+              const isToday = contact.followUpDate === today;
               return (
                 <div
                   key={contact.id}
