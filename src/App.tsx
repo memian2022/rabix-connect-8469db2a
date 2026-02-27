@@ -10,6 +10,7 @@ import Contacts from "./pages/Contacts";
 import CalendarPage from "./pages/CalendarPage";
 import Outreach from "./pages/Outreach";
 import Reports from "./pages/Reports";
+import Workspace from "./pages/Workspace";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/outreach" element={<Outreach />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/workspace" element={<Workspace />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
