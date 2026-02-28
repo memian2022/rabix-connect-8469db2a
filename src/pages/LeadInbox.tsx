@@ -79,15 +79,20 @@ export default function LeadInbox() {
   const [scrapeOpen, setScrapeOpen] = useState(false);
   const [scrapeForm, setScrapeForm] = useState({ query: "", city: "", country: "Pakistan", max_results: 30 });
   const [jobStatus, setJobStatus] = useState<string | null>(null);
+  const [isScraping, setIsScraping] = useState(false);
+  const [fetchErrors, setFetchErrors] = useState<string[]>([]);
 
-  const { data: leads = [], isLoading, refetch } = useQuery({
+  const { data: leads = [], isLoading, error: leadsError, refetch } = useQuery({
     queryKey: ["qualified_leads"],
     queryFn: async () => {
-      const res = await fetch(`${AGENT_URL}/leads/qualified?limit=100&stage=qualified`);
-      if (!res.ok) throw new Error("Agent API not reachable");
+      const url = `${AGENT_URL}/leads/qualified?limit=100&stage=qualified`;
+      console.log("Fetching qualified leads from:", url);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json() as Promise<QualifiedLead[]>;
     },
     refetchInterval: 30000,
+    retry: 1,
   });
 
   const { data: approvedLeads = [] } = useQuery({
@@ -147,13 +152,23 @@ export default function LeadInbox() {
   });
 
   const startScrape = async () => {
+    if (isScraping) return;
+    setIsScraping(true);
+    setFetchErrors([]);
     try {
       setJobStatus("starting...");
-      const res = await fetch(`${AGENT_URL}/scrape/start`, {
+      const url = `${AGENT_URL}/scrape/start`;
+      console.log("Starting scrape at:", url, "with body:", JSON.stringify(scrapeForm));
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(scrapeForm),
       });
+      console.log("Scrape response status:", res.status);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`HTTP ${res.status}: ${text}`);
+      }
       const data = await res.json();
       setJobStatus(`Running — Job ID: ${data.job_id.slice(0, 8)}...`);
       setScrapeOpen(false);
@@ -171,8 +186,13 @@ export default function LeadInbox() {
           clearInterval(poll);
         }
       }, 5000);
-    } catch {
-      setJobStatus("✗ Could not reach agent API. Is the VPS running?");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Scrape error:", msg);
+      setJobStatus(`✗ Error: ${msg}`);
+      setFetchErrors((prev) => [...prev, `[scrape] ${msg}`]);
+    } finally {
+      setIsScraping(false);
     }
   };
 
@@ -181,9 +201,16 @@ export default function LeadInbox() {
   return (
     <div className="space-y-6">
       {/* Debug panel */}
-      <div className="bg-muted border border-border rounded p-3 text-xs font-mono mb-4">
+      <div className="bg-muted border border-border rounded p-3 text-xs font-mono mb-4 space-y-1">
         <p>AGENT_URL: {AGENT_URL}</p>
-        <p>Stats status: {statsError ? `ERROR: ${(statsError as Error).message}` : stats ? "OK" : "loading..."}</p>
+        <p>Stats: {statsError ? <span className="text-destructive">ERROR: {(statsError as Error).message}</span> : stats ? <span className="text-success">OK ✓</span> : "loading..."}</p>
+        <p>Leads: {leadsError ? <span className="text-destructive">ERROR: {(leadsError as Error).message}</span> : leads.length > 0 ? <span className="text-success">{leads.length} loaded ✓</span> : "none"}</p>
+        {fetchErrors.length > 0 && (
+          <div className="mt-2 border-t border-border pt-2">
+            <p className="text-destructive font-bold">Recent errors:</p>
+            {fetchErrors.map((e, i) => <p key={i} className="text-destructive">{e}</p>)}
+          </div>
+        )}
       </div>
 
       {/* Header stats */}
@@ -465,8 +492,8 @@ export default function LeadInbox() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setScrapeOpen(false)} className="px-4 py-2 text-sm text-muted-foreground">Cancel</button>
-              <button onClick={startScrape} className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90">
-                Start Scraping
+              <button onClick={startScrape} disabled={isScraping} className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50">
+                {isScraping ? "Scraping..." : "Start Scraping"}
               </button>
             </div>
           </div>
