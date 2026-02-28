@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-const AGENT_URL = import.meta.env.VITE_AGENT_URL || "http://localhost:8000";
+const AGENT_URL = import.meta.env.VITE_AGENT_URL || "http://18.118.95.131:8000";
 
 type LeadStage = "qualified" | "approved" | "disqualified" | "outreached" | "converted";
 
