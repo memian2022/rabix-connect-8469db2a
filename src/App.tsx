@@ -11,6 +11,7 @@ import CalendarPage from "./pages/CalendarPage";
 import Outreach from "./pages/Outreach";
 import Reports from "./pages/Reports";
 import Workspace from "./pages/Workspace";
+import LeadInbox from "./pages/LeadInbox";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/outreach" element={<Outreach />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/workspace" element={<Workspace />} />
+            <Route path="/leads" element={<LeadInbox />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
