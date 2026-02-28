@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CheckCircle,
   XCircle,
@@ -81,6 +81,24 @@ export default function LeadInbox() {
   const [jobStatus, setJobStatus] = useState<string | null>(null);
   const [isScraping, setIsScraping] = useState(false);
   const [fetchErrors, setFetchErrors] = useState<string[]>([]);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [isJobRunning, setIsJobRunning] = useState(false);
+  const pollRef = useRef<number | null>(null);
+
+  const clearPolling = () => {
+    if (pollRef.current !== null) {
+      window.clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (pollRef.current !== null) {
+        window.clearInterval(pollRef.current);
+      }
+    };
+  }, []);
 
   const { data: leads = [], isLoading, error: leadsError, refetch } = useQuery({
     queryKey: ["qualified_leads"],
@@ -152,9 +170,11 @@ export default function LeadInbox() {
   });
 
   const startScrape = async () => {
-    if (isScraping) return;
+    if (isScraping || isJobRunning) return;
     setIsScraping(true);
     setFetchErrors([]);
+    clearPolling();
+
     try {
       setJobStatus("starting...");
       const url = `${AGENT_URL}/scrape/start`;
@@ -169,21 +189,49 @@ export default function LeadInbox() {
         const text = await res.text();
         throw new Error(`HTTP ${res.status}: ${text}`);
       }
+
       const data = await res.json();
+      setActiveJobId(data.job_id);
+      setIsJobRunning(true);
       setJobStatus(`Running — Job ID: ${data.job_id.slice(0, 8)}...`);
       setScrapeOpen(false);
 
-      const poll = setInterval(async () => {
-        const status = await fetch(`${AGENT_URL}/scrape/status/${data.job_id}`);
-        const s = await status.json();
-        if (s.status === "completed") {
-          setJobStatus(`✓ Done — ${s.leads_qualified || 0} leads qualified`);
-          clearInterval(poll);
-          refetch();
-          qc.invalidateQueries({ queryKey: ["agent_stats"] });
-        } else if (s.status === "failed") {
-          setJobStatus(`✗ Failed: ${s.error_message || "unknown error"}`);
-          clearInterval(poll);
+      let attempts = 0;
+      const maxAttempts = 36; // ~3 minutes at 5s interval
+
+      pollRef.current = window.setInterval(async () => {
+        try {
+          attempts += 1;
+          const statusRes = await fetch(`${AGENT_URL}/scrape/status/${data.job_id}`);
+          if (!statusRes.ok) throw new Error(`Status HTTP ${statusRes.status}`);
+          const s = await statusRes.json();
+
+          if (s.status === "completed") {
+            setJobStatus(`✓ Done — ${s.leads_qualified || 0} leads qualified`);
+            clearPolling();
+            setIsJobRunning(false);
+            setActiveJobId(null);
+            refetch();
+            qc.invalidateQueries({ queryKey: ["agent_stats"] });
+          } else if (s.status === "failed") {
+            setJobStatus(`✗ Failed: ${s.error_message || "unknown error"}`);
+            clearPolling();
+            setIsJobRunning(false);
+            setActiveJobId(null);
+          } else if (attempts >= maxAttempts) {
+            setJobStatus('⚠ Still running after 3 min. Click "Reset Session" and run again.');
+            setFetchErrors((prev) => [...prev, `[status] timeout for job ${data.job_id.slice(0, 8)}`]);
+            clearPolling();
+            setIsJobRunning(false);
+            setActiveJobId(null);
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setJobStatus(`✗ Status error: ${msg}`);
+          setFetchErrors((prev) => [...prev, `[status] ${msg}`]);
+          clearPolling();
+          setIsJobRunning(false);
+          setActiveJobId(null);
         }
       }, 5000);
     } catch (err) {
@@ -191,9 +239,23 @@ export default function LeadInbox() {
       console.error("Scrape error:", msg);
       setJobStatus(`✗ Error: ${msg}`);
       setFetchErrors((prev) => [...prev, `[scrape] ${msg}`]);
+      setIsJobRunning(false);
+      setActiveJobId(null);
     } finally {
       setIsScraping(false);
     }
+  };
+
+  const resetScrapeSession = () => {
+    clearPolling();
+    setActiveJobId(null);
+    setIsJobRunning(false);
+    setJobStatus("Session reset. Run scrape again.");
+    setFetchErrors([]);
+    qc.invalidateQueries({ queryKey: ["qualified_leads"] });
+    qc.invalidateQueries({ queryKey: ["approved_leads"] });
+    qc.invalidateQueries({ queryKey: ["agent_stats"] });
+    refetch();
   };
 
   const displayLeads = activeTab === "pending" ? leads : activeTab === "approved" ? approvedLeads : [...leads, ...approvedLeads];
@@ -248,6 +310,15 @@ export default function LeadInbox() {
           {jobStatus && (
             <span className="text-xs text-muted-foreground">{jobStatus}</span>
           )}
+          {(isJobRunning || activeJobId) && (
+            <button
+              onClick={resetScrapeSession}
+              className="px-3 py-1.5 text-xs font-medium rounded border border-border bg-card hover:bg-accent"
+              title="Reset current scrape session"
+            >
+              Reset Session
+            </button>
+          )}
           <button
             onClick={() => refetch()}
             className="p-2 hover:bg-accent rounded transition-colors"
@@ -257,10 +328,11 @@ export default function LeadInbox() {
           </button>
           <button
             onClick={() => setScrapeOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90"
+            disabled={isScraping || isJobRunning}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50"
           >
             <Play className="h-4 w-4" />
-            Run Scrape
+            {isScraping ? "Starting..." : isJobRunning ? "Job Running..." : "Run Scrape"}
           </button>
         </div>
       </div>
@@ -492,8 +564,8 @@ export default function LeadInbox() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setScrapeOpen(false)} className="px-4 py-2 text-sm text-muted-foreground">Cancel</button>
-              <button onClick={startScrape} disabled={isScraping} className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50">
-                {isScraping ? "Scraping..." : "Start Scraping"}
+              <button onClick={startScrape} disabled={isScraping || isJobRunning} className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50">
+                {isScraping ? "Starting..." : isJobRunning ? "Job Running..." : "Start Scraping"}
               </button>
             </div>
           </div>
