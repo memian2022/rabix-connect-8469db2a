@@ -99,14 +99,18 @@ export default function LeadInbox() {
     },
   });
 
-  const { data: stats } = useQuery({
+  const { data: stats, error: statsError } = useQuery({
     queryKey: ["agent_stats"],
     queryFn: async () => {
-      const res = await fetch(`${AGENT_URL}/stats`);
-      if (!res.ok) return null;
+      const url = `${AGENT_URL}/stats`;
+      console.log("Fetching agent stats from:", url);
+      const res = await fetch(url);
+      console.log("Response status:", res.status);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     },
     refetchInterval: 10000,
+    retry: 1,
   });
 
   const approveMutation = useMutation({
@@ -176,6 +180,12 @@ export default function LeadInbox() {
 
   return (
     <div className="space-y-6">
+      {/* Debug panel */}
+      <div className="bg-muted border border-border rounded p-3 text-xs font-mono mb-4">
+        <p>AGENT_URL: {AGENT_URL}</p>
+        <p>Stats status: {statsError ? `ERROR: ${(statsError as Error).message}` : stats ? "OK" : "loading..."}</p>
+      </div>
+
       {/* Header stats */}
       <div className="grid grid-cols-4 gap-4">
         {[
