@@ -211,7 +211,10 @@ export default function LeadInbox() {
       setScrapeOpen(false);
 
       let attempts = 0;
-      const maxAttempts = 36; // ~3 minutes at 5s interval
+      // Dynamic timeout: ~7min for ≤20, ~15min for ≤50, ~25min for >50
+      const maxResults = scrapeForm.max_results || 30;
+      const timeoutMinutes = maxResults <= 20 ? 7 : maxResults <= 50 ? 15 : 25;
+      const maxAttempts = Math.ceil((timeoutMinutes * 60) / 5);
 
       pollRef.current = window.setInterval(async () => {
         try {
@@ -233,7 +236,7 @@ export default function LeadInbox() {
             setIsJobRunning(false);
             setActiveJobId(null);
           } else if (attempts >= maxAttempts) {
-            setJobStatus('⚠ Still running after 3 min. Click "Reset Session" and run again.');
+            setJobStatus(`⚠ Still running after ${timeoutMinutes} min. Click "Reset Session" and run again.`);
             setFetchErrors((prev) => [...prev, `[status] timeout for job ${data.job_id.slice(0, 8)}`]);
             clearPolling();
             setIsJobRunning(false);
