@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 const AGENT_URL = import.meta.env.VITE_AGENT_URL || "https://rabix-agent.duckdns.org";
 
@@ -111,6 +112,19 @@ export default function LeadInbox() {
     },
     refetchInterval: 30000,
     retry: 1,
+  });
+
+  const { data: supabaseLeads = [] } = useQuery({
+    queryKey: ["supabase_qualified_leads"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("qualified_leads")
+        .select("*, raw_leads(*), enriched_leads(*)")
+        .eq("stage", "qualified")
+        .order("score", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as QualifiedLead[];
+    },
   });
 
   const { data: approvedLeads = [] } = useQuery({
@@ -258,7 +272,8 @@ export default function LeadInbox() {
     refetch();
   };
 
-  const displayLeads = activeTab === "pending" ? leads : activeTab === "approved" ? approvedLeads : [...leads, ...approvedLeads];
+  const effectiveLeads = leads.length > 0 ? leads : supabaseLeads;
+  const displayLeads = activeTab === "pending" ? effectiveLeads : activeTab === "approved" ? approvedLeads : [...effectiveLeads, ...approvedLeads];
 
   return (
     <div className="space-y-6">
