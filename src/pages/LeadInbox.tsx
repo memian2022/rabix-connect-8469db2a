@@ -12,6 +12,11 @@ import {
   RefreshCw,
   Play,
   X,
+  Linkedin,
+  Instagram,
+  Facebook,
+  Users,
+  ExternalLink,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -45,11 +50,17 @@ interface QualifiedLead {
     decision_maker_linkedin: string;
     verified_email: string;
     email_confidence: number;
+    email_is_personal: boolean;
     works_digitally: boolean;
     uses_ai_tools: boolean;
     ai_tools_found: string[];
     website_summary: string;
     services_offered: string;
+    estimated_employees: number;
+    tech_stack: string[];
+    instagram_url: string;
+    facebook_url: string;
+    linkedin_company_url: string;
   };
 }
 
@@ -465,6 +476,93 @@ export default function LeadInbox() {
                 {/* Expanded detail */}
                 {isExpanded && (
                   <div className="px-4 pb-4 border-t border-border pt-3 space-y-4">
+                    {/* Decision Maker */}
+                    {enrich?.decision_maker_name && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5">Decision Maker</p>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <span className="flex items-center gap-1.5 text-sm text-foreground">
+                            <User className="h-3.5 w-3.5" />
+                            {enrich.decision_maker_name}
+                            {enrich.decision_maker_role && <span className="text-muted-foreground">· {enrich.decision_maker_role}</span>}
+                          </span>
+                          {enrich.decision_maker_linkedin && (
+                            <a href={enrich.decision_maker_linkedin} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                              <Linkedin className="h-3 w-3" /> LinkedIn
+                            </a>
+                          )}
+                          {enrich.verified_email && (
+                            <span className="flex items-center gap-1.5 text-sm">
+                              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                              {enrich.verified_email}
+                              {enrich.email_is_personal === true && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/10 text-success font-medium">Personal email</span>
+                              )}
+                              {enrich.email_is_personal === false && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">Generic email</span>
+                              )}
+                            </span>
+                          )}
+                          {enrich.email_confidence != null && (
+                            <span className="text-xs text-muted-foreground">{enrich.email_confidence}% confidence</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Company Intelligence */}
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1.5">Company Intelligence</p>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {enrich?.estimated_employees != null && (
+                          <span className="flex items-center gap-1 text-sm text-foreground">
+                            <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                            ~{enrich.estimated_employees} employees
+                          </span>
+                        )}
+                        {enrich?.uses_ai_tools === true && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">⚠ Uses AI tools</span>
+                        )}
+                        {enrich?.uses_ai_tools === false && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/10 text-success font-medium">✓ No AI detected</span>
+                        )}
+                        <span className="text-sm">
+                          {enrich?.works_digitally ? "✓ Digital business" : "✗ Unclear if digital"}
+                        </span>
+                      </div>
+                      {enrich?.tech_stack && enrich.tech_stack.length > 0 && (
+                        <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                          <span className="text-xs text-muted-foreground">Tech:</span>
+                          {enrich.tech_stack.map((t) => (
+                            <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{t}</span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 mt-2">
+                        {raw?.website && (
+                          <a href={raw.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-muted text-foreground hover:bg-accent transition-colors">
+                            <Globe className="h-3 w-3" /> Website
+                          </a>
+                        )}
+                        {enrich?.instagram_url && (
+                          <a href={enrich.instagram_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-muted text-foreground hover:bg-accent transition-colors">
+                            <Instagram className="h-3 w-3" /> Instagram
+                          </a>
+                        )}
+                        {enrich?.facebook_url && (
+                          <a href={enrich.facebook_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-muted text-foreground hover:bg-accent transition-colors">
+                            <Facebook className="h-3 w-3" /> Facebook
+                          </a>
+                        )}
+                        {enrich?.linkedin_company_url && (
+                          <a href={enrich.linkedin_company_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-muted text-foreground hover:bg-accent transition-colors">
+                            <Linkedin className="h-3 w-3" /> Company
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Why they fit + Outreach angle + Summary */}
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-1">Why they fit</p>
@@ -478,44 +576,6 @@ export default function LeadInbox() {
                         <div>
                           <p className="text-xs font-medium text-muted-foreground mb-1">Business summary</p>
                           <p className="text-sm text-foreground">{enrich.website_summary}</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex gap-6">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground">Digital business</p>
-                          <p className="text-sm">
-                            {enrich?.works_digitally ? "✓ Yes" : "✗ Unclear"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground">Uses AI</p>
-                          <p className="text-sm">
-                            {enrich?.uses_ai_tools ? `⚠ Yes (${enrich.ai_tools_found?.join(", ")})` : "✓ Not yet"}
-                          </p>
-                        </div>
-                      </div>
-                      {raw?.website && (
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground">Website</p>
-                          <a href={raw.website} target="_blank" rel="noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
-                            <Globe className="h-3 w-3" /> {raw.website}
-                          </a>
-                        </div>
-                      )}
-                      {enrich?.decision_maker_linkedin && (
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground">LinkedIn</p>
-                          <a href={enrich.decision_maker_linkedin} target="_blank" rel="noreferrer" className="text-sm text-primary hover:underline">
-                            {enrich.decision_maker_linkedin}
-                          </a>
-                        </div>
-                      )}
-                      {enrich?.email_confidence && (
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground">Email confidence</p>
-                          <p className="text-sm">{enrich.email_confidence}%</p>
                         </div>
                       )}
                     </div>
