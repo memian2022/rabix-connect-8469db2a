@@ -115,7 +115,7 @@ export default function LeadInbox() {
   const { data: leads = [], isLoading, error: leadsError, refetch } = useQuery({
     queryKey: ["qualified_leads"],
     queryFn: async () => {
-      const url = `${AGENT_URL}/leads/qualified?limit=100&stage=qualified`;
+      const url = `${AGENT_URL}/leads/qualified?limit=1000&stage=qualified`;
       console.log("Fetching qualified leads from:", url);
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -141,7 +141,7 @@ export default function LeadInbox() {
   const { data: approvedLeads = [] } = useQuery({
     queryKey: ["approved_leads"],
     queryFn: async () => {
-      const res = await fetch(`${AGENT_URL}/leads/qualified?limit=100&stage=approved`);
+      const res = await fetch(`${AGENT_URL}/leads/qualified?limit=1000&stage=approved`);
       if (!res.ok) return [];
       return res.json() as Promise<QualifiedLead[]>;
     },
