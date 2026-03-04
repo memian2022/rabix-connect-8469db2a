@@ -69,8 +69,8 @@ interface QualifiedLead {
 
 const scoreColor = (score: number) => {
   if (score >= 80) return "text-success bg-success/10";
-  if (score >= 65) return "text-warning bg-warning/10";
-  return "text-muted-foreground bg-muted";
+  if (score >= 60) return "text-warning bg-warning/10";
+  return "text-destructive bg-destructive/10";
 };
 
 const serviceBadge: Record<string, string> = {
@@ -412,7 +412,7 @@ export default function LeadInbox() {
                       <circle cx="18" cy="18" r="15.915" fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
                       <circle
                         cx="18" cy="18" r="15.915" fill="none"
-                        stroke={lead.score >= 80 ? "hsl(var(--success))" : lead.score >= 65 ? "hsl(var(--warning))" : "hsl(var(--muted-foreground))"}
+                        stroke={lead.score >= 80 ? "hsl(var(--success))" : lead.score >= 60 ? "hsl(var(--warning))" : "hsl(var(--destructive))"}
                         strokeWidth="3"
                         strokeDasharray={`${lead.score} ${100 - lead.score}`}
                         strokeLinecap="round"
@@ -432,6 +432,9 @@ export default function LeadInbox() {
                         </span>
                       )}
                     </div>
+                    {enrich?.website_summary && (
+                      <p className="text-xs text-muted-foreground truncate max-w-md mt-0.5">{enrich.website_summary}</p>
+                    )}
                     <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
                       {raw?.category && <span>{raw.category}</span>}
                       {raw?.city && <span>📍 {raw.city}, {raw?.country}</span>}
