@@ -98,7 +98,7 @@ const confidenceColor = (c: number) => {
 export default function LeadInbox() {
   const qc = useQueryClient();
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "all">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "rejected" | "all">("pending");
   const [scrapeOpen, setScrapeOpen] = useState(false);
   const [scrapeForm, setScrapeForm] = useState({ query: "", city: "", country: "Pakistan", max_results: 30 });
   const [jobStatus, setJobStatus] = useState<string | null>(null);
@@ -158,6 +158,15 @@ export default function LeadInbox() {
     },
   });
 
+  const { data: rejectedLeads = [] } = useQuery({
+    queryKey: ["rejected_leads"],
+    queryFn: async () => {
+      const res = await fetch(`${AGENT_URL}/leads/qualified?limit=1000&stage=disqualified`);
+      if (!res.ok) return [];
+      return res.json() as Promise<QualifiedLead[]>;
+    },
+  });
+
   const { data: stats, error: statsError } = useQuery({
     queryKey: ["agent_stats"],
     queryFn: async () => {
@@ -201,6 +210,7 @@ export default function LeadInbox() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["qualified_leads"] });
+      qc.invalidateQueries({ queryKey: ["rejected_leads"] });
       qc.invalidateQueries({ queryKey: ["agent_stats"] });
     },
   });
@@ -298,7 +308,7 @@ export default function LeadInbox() {
   };
 
   const effectiveLeads = leads.length > 0 ? leads : supabaseLeads;
-  const displayLeads = activeTab === "pending" ? effectiveLeads : activeTab === "approved" ? approvedLeads : [...effectiveLeads, ...approvedLeads];
+  const displayLeads = activeTab === "pending" ? effectiveLeads : activeTab === "approved" ? approvedLeads : activeTab === "rejected" ? rejectedLeads : [...effectiveLeads, ...approvedLeads, ...rejectedLeads];
 
   return (
     <div className="space-y-6">
@@ -333,7 +343,7 @@ export default function LeadInbox() {
       {/* Controls */}
       <div className="flex items-center justify-between">
         <div className="flex gap-1">
-          {(["pending", "approved", "all"] as const).map((tab) => (
+          {(["pending", "approved", "rejected", "all"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -341,7 +351,7 @@ export default function LeadInbox() {
                 activeTab === tab ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground hover:bg-accent"
               }`}
             >
-              {tab === "pending" ? `Pending (${leads.length})` : tab === "approved" ? `Approved (${approvedLeads.length})` : "All"}
+              {tab === "pending" ? `Pending (${leads.length})` : tab === "approved" ? `Approved (${approvedLeads.length})` : tab === "rejected" ? `Rejected (${rejectedLeads.length})` : "All"}
             </button>
           ))}
         </div>
@@ -403,7 +413,7 @@ export default function LeadInbox() {
             const isPending = lead.stage === "qualified";
 
             return (
-              <div key={lead.id} className="bg-card border border-border rounded-lg overflow-hidden">
+              <div key={lead.id} className={`border border-border rounded-lg overflow-hidden ${lead.stage === "disqualified" ? "bg-muted/50 opacity-75" : "bg-card"}`}>
                 {/* Row */}
                 <div className="flex items-center gap-4 px-4 py-3">
                   {/* Circular Score */}
@@ -456,6 +466,11 @@ export default function LeadInbox() {
                   {lead.stage === "approved" && (
                     <span className="text-xs font-medium px-2 py-0.5 rounded bg-success/10 text-success">
                       Approved ✓
+                    </span>
+                  )}
+                  {lead.stage === "disqualified" && (
+                    <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                      Rejected
                     </span>
                   )}
 
