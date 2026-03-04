@@ -435,21 +435,32 @@ export default function LeadInbox() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm text-foreground truncate">{raw?.company_name}</span>
-                      {raw?.rating && (
+                      {raw?.rating != null && (
                         <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
                           <Star className="h-3 w-3 text-warning fill-warning" />
                           {raw.rating} ({raw.reviews_count})
                         </span>
                       )}
+                      {raw?.website && (
+                        <a href={raw.website} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 text-xs text-primary hover:underline truncate max-w-[180px]">
+                          <Globe className="h-3 w-3 flex-shrink-0" />
+                          {raw.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
+                        </a>
+                      )}
                     </div>
                     {enrich?.website_summary && (
-                      <p className="text-xs text-muted-foreground truncate max-w-md mt-0.5">{enrich.website_summary}</p>
+                      <p className="text-xs text-muted-foreground truncate max-w-lg mt-0.5">{enrich.website_summary}</p>
                     )}
                     <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
                       {raw?.category && <span>{raw.category}</span>}
-                      {raw?.city && <span>📍 {raw.city}, {raw?.country}</span>}
+                      {raw?.city && (
+                        <span className="flex items-center gap-0.5">
+                          <MapPin className="h-3 w-3" />
+                          {raw.city}, {raw?.country}
+                        </span>
+                      )}
                       {raw?.phone && (
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-0.5">
                           <Phone className="h-3 w-3" />
                           {raw.phone}
                         </span>
