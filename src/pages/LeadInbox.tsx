@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import {
   CheckCircle,
   XCircle,
@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { formatDistanceToNow, isToday, isYesterday, differenceInMinutes, format } from "date-fns";
 
 const AGENT_URL = import.meta.env.VITE_AGENT_URL || "https://rabix-agent.duckdns.org";
 
@@ -46,6 +47,7 @@ interface QualifiedLead {
     phone: string;
     address: string;
     scrape_query: string;
+    created_at?: string;
   };
   enriched_leads: {
     decision_maker_name: string;
@@ -308,7 +310,37 @@ export default function LeadInbox() {
   };
 
   const effectiveLeads = leads.length > 0 ? leads : supabaseLeads;
-  const displayLeads = activeTab === "pending" ? effectiveLeads : activeTab === "approved" ? approvedLeads : activeTab === "rejected" ? rejectedLeads : [...effectiveLeads, ...approvedLeads, ...rejectedLeads];
+  const unsortedLeads = activeTab === "pending" ? effectiveLeads : activeTab === "approved" ? approvedLeads : activeTab === "rejected" ? rejectedLeads : [...effectiveLeads, ...approvedLeads, ...rejectedLeads];
+
+  const sortedAndGrouped = useMemo(() => {
+    const sorted = [...unsortedLeads].sort((a, b) => {
+      const dateA = new Date(a.raw_leads?.created_at || a.created_at).getTime();
+      const dateB = new Date(b.raw_leads?.created_at || b.created_at).getTime();
+      return dateB - dateA;
+    });
+
+    const groups: { label: string; leads: QualifiedLead[] }[] = [];
+    let currentLabel = "";
+    for (const lead of sorted) {
+      const d = new Date(lead.raw_leads?.created_at || lead.created_at);
+      const now = new Date();
+      let label: string;
+      if (differenceInMinutes(now, d) <= 30) label = "Just now";
+      else if (isToday(d)) label = "Today";
+      else if (isYesterday(d)) label = "Yesterday";
+      else label = format(d, "MMM d");
+
+      if (label !== currentLabel) {
+        currentLabel = label;
+        groups.push({ label, leads: [lead] });
+      } else {
+        groups[groups.length - 1].leads.push(lead);
+      }
+    }
+    return groups;
+  }, [unsortedLeads]);
+
+  const displayLeads = unsortedLeads; // keep for count
 
   return (
     <div className="space-y-6">
@@ -405,272 +437,263 @@ export default function LeadInbox() {
           <p className="text-sm text-muted-foreground">Run a scrape to start filling your inbox</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {displayLeads.map((lead) => {
-            const raw = lead.raw_leads;
-            const enrich = lead.enriched_leads;
-            const isExpanded = expanded === lead.id;
-            const isPending = lead.stage === "qualified";
+        <div className="space-y-1">
+          {sortedAndGrouped.map((group) => (
+            <div key={group.label}>
+              <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm px-1 py-1.5">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{group.label}</span>
+              </div>
+              <div className="space-y-2">
+                {group.leads.map((lead) => {
+                  const raw = lead.raw_leads;
+                  const enrich = lead.enriched_leads;
+                  const isExpanded = expanded === lead.id;
+                  const isPending = lead.stage === "qualified";
+                  const createdAt = raw?.created_at || lead.created_at;
+                  const relativeTime = createdAt
+                    ? formatDistanceToNow(new Date(createdAt), { addSuffix: true })
+                    : null;
 
-            return (
-              <div key={lead.id} className={`border border-border rounded-lg overflow-hidden ${lead.stage === "disqualified" ? "bg-muted/50 opacity-75" : "bg-card"}`}>
-                {/* Row */}
-                <div className="flex items-center gap-4 px-4 py-3">
-                  {/* Circular Score */}
-                  <div className="relative flex-shrink-0 h-10 w-10">
-                    <svg viewBox="0 0 36 36" className="h-10 w-10 -rotate-90">
-                      <circle cx="18" cy="18" r="15.915" fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
-                      <circle
-                        cx="18" cy="18" r="15.915" fill="none"
-                        stroke={lead.score >= 80 ? "hsl(var(--success))" : lead.score >= 60 ? "hsl(var(--warning))" : "hsl(var(--destructive))"}
-                        strokeWidth="3"
-                        strokeDasharray={`${lead.score} ${100 - lead.score}`}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-foreground">{lead.score}</span>
-                  </div>
+                  return (
+                    <div key={lead.id} className={`border border-border rounded-lg overflow-hidden ${lead.stage === "disqualified" ? "bg-muted/50 opacity-75" : "bg-card"}`}>
+                      {/* Row */}
+                      <div className="flex items-center gap-4 px-4 py-3">
+                        {/* Circular Score */}
+                        <div className="relative flex-shrink-0 h-10 w-10">
+                          <svg viewBox="0 0 36 36" className="h-10 w-10 -rotate-90">
+                            <circle cx="18" cy="18" r="15.915" fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
+                            <circle
+                              cx="18" cy="18" r="15.915" fill="none"
+                              stroke={lead.score >= 80 ? "hsl(var(--success))" : lead.score >= 60 ? "hsl(var(--warning))" : "hsl(var(--destructive))"}
+                              strokeWidth="3"
+                              strokeDasharray={`${lead.score} ${100 - lead.score}`}
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-foreground">{lead.score}</span>
+                        </div>
 
-                  {/* Main info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm text-foreground truncate">{raw?.company_name}</span>
-                      {raw?.rating != null && (
-                        <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
-                          <Star className="h-3 w-3 text-warning fill-warning" />
-                          {raw.rating} ({raw.reviews_count})
-                        </span>
-                      )}
-                      {raw?.website && (
-                        <a href={raw.website} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 text-xs text-primary hover:underline truncate max-w-[180px]">
-                          <Globe className="h-3 w-3 flex-shrink-0" />
-                          {raw.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
-                        </a>
-                      )}
-                    </div>
-                    {enrich?.website_summary && (
-                      <p className="text-xs text-muted-foreground truncate max-w-lg mt-0.5">{enrich.website_summary}</p>
-                    )}
-                    <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
-                      {raw?.category && <span>{raw.category}</span>}
-                      {raw?.city && (
-                        <span className="flex items-center gap-0.5">
-                          <MapPin className="h-3 w-3" />
-                          {raw.city}, {raw?.country}
-                        </span>
-                      )}
-                      {raw?.phone && (
-                        <span className="flex items-center gap-0.5">
-                          <Phone className="h-3 w-3" />
-                          {raw.phone}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Service badge */}
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${serviceBadge[lead.service_fit] || serviceBadge.tbd}`}>
-                    {serviceLabel[lead.service_fit] || lead.service_fit}
-                  </span>
-
-                  {/* Stage badge for approved */}
-                  {lead.stage === "approved" && (
-                    <span className="text-xs font-medium px-2 py-0.5 rounded bg-success/10 text-success">
-                      Approved ✓
-                    </span>
-                  )}
-                  {lead.stage === "disqualified" && (
-                    <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                      Rejected
-                    </span>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1.5">
-                    {isPending && (
-                      <>
-                        <button
-                          onClick={() => rejectMutation.mutate(lead.id)}
-                          disabled={rejectMutation.isPending}
-                          className="p-1.5 hover:bg-destructive/10 rounded transition-colors"
-                          title="Reject"
-                        >
-                          <XCircle className="h-4 w-4 text-destructive" />
-                        </button>
-                        <button
-                          onClick={() => approveMutation.mutate(lead.id)}
-                          disabled={approveMutation.isPending}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-success/10 text-success text-xs font-medium rounded hover:bg-success/20 transition-colors"
-                        >
-                          <CheckCircle className="h-3.5 w-3.5" />
-                          Approve
-                        </button>
-                      </>
-                    )}
-                    <button
-                      onClick={() => setExpanded(isExpanded ? null : lead.id)}
-                      className="p-1.5 hover:bg-accent rounded transition-colors"
-                    >
-                      {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Expanded detail */}
-                {isExpanded && (
-                  <div className="px-4 pb-4 border-t border-border pt-3 space-y-4">
-                    {/* Contact Info Row */}
-                    <div className="flex items-center gap-4 flex-wrap text-sm">
-                      {raw?.phone && (
-                        <span className="flex items-center gap-1.5 text-foreground">
-                          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                          {raw.phone}
-                        </span>
-                      )}
-                      {raw?.address && (
-                        <span className="flex items-center gap-1.5 text-foreground">
-                          <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                          {raw.address}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Decision Maker */}
-                    {enrich?.decision_maker_name && (
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5">Decision Maker</p>
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <div className="flex flex-col">
-                            <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-                              <User className="h-3.5 w-3.5" />
-                              {enrich.decision_maker_name}
-                            </span>
-                            {enrich.decision_maker_role && (
-                              <span className="text-xs text-muted-foreground ml-5">{enrich.decision_maker_role}</span>
+                        {/* Main info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm text-foreground truncate">{raw?.company_name}</span>
+                            {raw?.rating != null && (
+                              <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                                <Star className="h-3 w-3 text-warning fill-warning" />
+                                {raw.rating} ({raw.reviews_count})
+                              </span>
+                            )}
+                            {raw?.website && (
+                              <a href={raw.website} target="_blank" rel="noreferrer" className="flex items-center gap-0.5 text-xs text-primary hover:underline truncate max-w-[180px]">
+                                <Globe className="h-3 w-3 flex-shrink-0" />
+                                {raw.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
+                              </a>
+                            )}
+                            {relativeTime && (
+                              <span className="text-[10px] text-muted-foreground ml-auto flex-shrink-0">{relativeTime}</span>
                             )}
                           </div>
-                          {enrich.decision_maker_linkedin && (
-                            <a href={enrich.decision_maker_linkedin} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-                              <Linkedin className="h-3 w-3" /> LinkedIn
-                            </a>
+                          {enrich?.website_summary && (
+                            <p className="text-xs text-muted-foreground truncate max-w-lg mt-0.5">{enrich.website_summary}</p>
                           )}
+                          <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                            {raw?.category && <span>{raw.category}</span>}
+                            {raw?.city && (
+                              <span className="flex items-center gap-0.5">
+                                <MapPin className="h-3 w-3" />
+                                {raw.city}, {raw?.country}
+                              </span>
+                            )}
+                            {raw?.phone && (
+                              <span className="flex items-center gap-0.5">
+                                <Phone className="h-3 w-3" />
+                                {raw.phone}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
 
-                    {/* Email with confidence */}
-                    {enrich?.verified_email && (
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5">Email</p>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="flex items-center gap-1.5 text-sm text-foreground">
-                            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                            {enrich.verified_email}
-                          </span>
-                          {enrich.email_confidence != null && (
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${confidenceColor(enrich.email_confidence)}`}>
-                              {enrich.email_confidence}% confidence
-                            </span>
-                          )}
-                          {enrich.email_is_personal === true && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-medium">Personal</span>
-                          )}
-                          {enrich.email_is_personal === false && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">Generic</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Social Links as icon buttons */}
-                    <div className="flex items-center gap-2">
-                      {raw?.website && (
-                        <a href={raw.website} target="_blank" rel="noreferrer" className="p-2 rounded bg-muted hover:bg-accent transition-colors" title="Website">
-                          <Globe className="h-4 w-4 text-foreground" />
-                        </a>
-                      )}
-                      {enrich?.instagram_url && (
-                        <a href={enrich.instagram_url} target="_blank" rel="noreferrer" className="p-2 rounded bg-muted hover:bg-accent transition-colors" title="Instagram">
-                          <Instagram className="h-4 w-4 text-foreground" />
-                        </a>
-                      )}
-                      {enrich?.facebook_url && (
-                        <a href={enrich.facebook_url} target="_blank" rel="noreferrer" className="p-2 rounded bg-muted hover:bg-accent transition-colors" title="Facebook">
-                          <Facebook className="h-4 w-4 text-foreground" />
-                        </a>
-                      )}
-                      {enrich?.linkedin_company_url && (
-                        <a href={enrich.linkedin_company_url} target="_blank" rel="noreferrer" className="p-2 rounded bg-muted hover:bg-accent transition-colors" title="Company LinkedIn">
-                          <Linkedin className="h-4 w-4 text-foreground" />
-                        </a>
-                      )}
-                      {enrich?.decision_maker_linkedin && (
-                        <a href={enrich.decision_maker_linkedin} target="_blank" rel="noreferrer" className="p-2 rounded bg-primary/10 hover:bg-primary/20 transition-colors" title="Decision Maker LinkedIn">
-                          <User className="h-4 w-4 text-primary" />
-                        </a>
-                      )}
-                    </div>
-
-                    {/* Company Intelligence */}
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1.5">Company Intelligence</p>
-                      <div className="flex items-center gap-3 flex-wrap">
-                        {enrich?.estimated_employees != null && (
-                          <span className="flex items-center gap-1 text-sm text-foreground">
-                            <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                            ~{enrich.estimated_employees} employees
-                          </span>
-                        )}
-                        {enrich?.uses_ai_tools === true && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">⚠ Uses AI tools</span>
-                        )}
-                        {enrich?.uses_ai_tools === false && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-medium">✓ No AI detected</span>
-                        )}
-                        <span className="text-sm">
-                          {enrich?.works_digitally ? "✓ Digital business" : "✗ Unclear if digital"}
+                        {/* Service badge */}
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded ${serviceBadge[lead.service_fit] || serviceBadge.tbd}`}>
+                          {serviceLabel[lead.service_fit] || lead.service_fit}
                         </span>
+
+                        {lead.stage === "approved" && (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded bg-success/10 text-success">Approved ✓</span>
+                        )}
+                        {lead.stage === "disqualified" && (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-muted-foreground">Rejected</span>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1.5">
+                          {isPending && (
+                            <>
+                              <button onClick={() => rejectMutation.mutate(lead.id)} disabled={rejectMutation.isPending} className="p-1.5 hover:bg-destructive/10 rounded transition-colors" title="Reject">
+                                <XCircle className="h-4 w-4 text-destructive" />
+                              </button>
+                              <button onClick={() => approveMutation.mutate(lead.id)} disabled={approveMutation.isPending} className="flex items-center gap-1.5 px-3 py-1.5 bg-success/10 text-success text-xs font-medium rounded hover:bg-success/20 transition-colors">
+                                <CheckCircle className="h-3.5 w-3.5" />
+                                Approve
+                              </button>
+                            </>
+                          )}
+                          <button onClick={() => setExpanded(isExpanded ? null : lead.id)} className="p-1.5 hover:bg-accent rounded transition-colors">
+                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          </button>
+                        </div>
                       </div>
-                      {enrich?.tech_stack && enrich.tech_stack.length > 0 && (
-                        <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                          <span className="text-xs text-muted-foreground">Tech:</span>
-                          {enrich.tech_stack.map((t) => (
-                            <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{t}</span>
-                          ))}
+
+                      {/* Expanded detail */}
+                      {isExpanded && (
+                        <div className="px-4 pb-4 border-t border-border pt-3 space-y-4">
+                          <div className="flex items-center gap-4 flex-wrap text-sm">
+                            {raw?.phone && (
+                              <span className="flex items-center gap-1.5 text-foreground">
+                                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                                {raw.phone}
+                              </span>
+                            )}
+                            {raw?.address && (
+                              <span className="flex items-center gap-1.5 text-foreground">
+                                <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                                {raw.address}
+                              </span>
+                            )}
+                          </div>
+
+                          {enrich?.decision_maker_name && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1.5">Decision Maker</p>
+                              <div className="flex items-center gap-3 flex-wrap">
+                                <div className="flex flex-col">
+                                  <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                                    <User className="h-3.5 w-3.5" />
+                                    {enrich.decision_maker_name}
+                                  </span>
+                                  {enrich.decision_maker_role && (
+                                    <span className="text-xs text-muted-foreground ml-5">{enrich.decision_maker_role}</span>
+                                  )}
+                                </div>
+                                {enrich.decision_maker_linkedin && (
+                                  <a href={enrich.decision_maker_linkedin} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                                    <Linkedin className="h-3 w-3" /> LinkedIn
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {enrich?.verified_email && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1.5">Email</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="flex items-center gap-1.5 text-sm text-foreground">
+                                  <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                                  {enrich.verified_email}
+                                </span>
+                                {enrich.email_confidence != null && (
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${confidenceColor(enrich.email_confidence)}`}>
+                                    {enrich.email_confidence}% confidence
+                                  </span>
+                                )}
+                                {enrich.email_is_personal === true && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/10 text-success font-medium">Personal</span>
+                                )}
+                                {enrich.email_is_personal === false && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">Generic</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-2">
+                            {raw?.website && (
+                              <a href={raw.website} target="_blank" rel="noreferrer" className="p-2 rounded bg-muted hover:bg-accent transition-colors" title="Website">
+                                <Globe className="h-4 w-4 text-foreground" />
+                              </a>
+                            )}
+                            {enrich?.instagram_url && (
+                              <a href={enrich.instagram_url} target="_blank" rel="noreferrer" className="p-2 rounded bg-muted hover:bg-accent transition-colors" title="Instagram">
+                                <Instagram className="h-4 w-4 text-foreground" />
+                              </a>
+                            )}
+                            {enrich?.facebook_url && (
+                              <a href={enrich.facebook_url} target="_blank" rel="noreferrer" className="p-2 rounded bg-muted hover:bg-accent transition-colors" title="Facebook">
+                                <Facebook className="h-4 w-4 text-foreground" />
+                              </a>
+                            )}
+                            {enrich?.linkedin_company_url && (
+                              <a href={enrich.linkedin_company_url} target="_blank" rel="noreferrer" className="p-2 rounded bg-muted hover:bg-accent transition-colors" title="Company LinkedIn">
+                                <Linkedin className="h-4 w-4 text-foreground" />
+                              </a>
+                            )}
+                            {enrich?.decision_maker_linkedin && (
+                              <a href={enrich.decision_maker_linkedin} target="_blank" rel="noreferrer" className="p-2 rounded bg-primary/10 hover:bg-primary/20 transition-colors" title="Decision Maker LinkedIn">
+                                <User className="h-4 w-4 text-primary" />
+                              </a>
+                            )}
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-1.5">Company Intelligence</p>
+                            <div className="flex items-center gap-3 flex-wrap">
+                              {enrich?.estimated_employees != null && (
+                                <span className="flex items-center gap-1 text-sm text-foreground">
+                                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                                  ~{enrich.estimated_employees} employees
+                                </span>
+                              )}
+                              {enrich?.uses_ai_tools === true && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">⚠ Uses AI tools</span>
+                              )}
+                              {enrich?.uses_ai_tools === false && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/10 text-success font-medium">✓ No AI detected</span>
+                              )}
+                              <span className="text-sm">
+                                {enrich?.works_digitally ? "✓ Digital business" : "✗ Unclear if digital"}
+                              </span>
+                            </div>
+                            {enrich?.tech_stack && enrich.tech_stack.length > 0 && (
+                              <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                                <span className="text-xs text-muted-foreground">Tech:</span>
+                                {enrich.tech_stack.map((t) => (
+                                  <span key={t} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{t}</span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-1">Why they fit</p>
+                            <p className="text-sm text-foreground">{lead.fit_reason}</p>
+                          </div>
+
+                          {lead.outreach_angle && (
+                            <details className="group">
+                              <summary className="text-xs font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors">
+                                Suggested Outreach <ChevronDown className="h-3 w-3 inline ml-0.5 group-open:rotate-180 transition-transform" />
+                              </summary>
+                              <p className="text-sm text-foreground italic mt-1.5 pl-2 border-l-2 border-primary/30">
+                                "{lead.outreach_angle}"
+                              </p>
+                            </details>
+                          )}
+
+                          {enrich?.website_summary && (
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">Business summary</p>
+                              <p className="text-sm text-foreground">{enrich.website_summary}</p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-
-                    {/* Why they fit */}
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Why they fit</p>
-                      <p className="text-sm text-foreground">{lead.fit_reason}</p>
-                    </div>
-
-                    {/* Suggested Outreach — collapsible */}
-                    {lead.outreach_angle && (
-                      <details className="group">
-                        <summary className="text-xs font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors">
-                          Suggested Outreach <ChevronDown className="h-3 w-3 inline ml-0.5 group-open:rotate-180 transition-transform" />
-                        </summary>
-                        <p className="text-sm text-foreground italic mt-1.5 pl-2 border-l-2 border-primary/30">
-                          "{lead.outreach_angle}"
-                        </p>
-                      </details>
-                    )}
-
-                    {/* Business summary */}
-                    {enrich?.website_summary && (
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Business summary</p>
-                        <p className="text-sm text-foreground">{enrich.website_summary}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
 
