@@ -17,6 +17,8 @@ import {
   Facebook,
   Users,
   ExternalLink,
+  Phone,
+  MapPin,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -42,6 +44,7 @@ interface QualifiedLead {
     rating: number;
     reviews_count: number;
     phone: string;
+    address: string;
     scrape_query: string;
   };
   enriched_leads: {
@@ -71,9 +74,10 @@ const scoreColor = (score: number) => {
 };
 
 const serviceBadge: Record<string, string> = {
-  audit: "bg-primary/10 text-primary",
-  training: "bg-accent text-accent-foreground",
-  custom: "bg-warning/10 text-warning",
+  audit: "bg-blue-500/10 text-blue-500",
+  training: "bg-emerald-500/10 text-emerald-500",
+  custom: "bg-purple-500/10 text-purple-500",
+  disqualified: "bg-muted text-muted-foreground",
   tbd: "bg-muted text-muted-foreground",
 };
 
@@ -81,7 +85,14 @@ const serviceLabel: Record<string, string> = {
   audit: "AI Audit",
   training: "AI Training",
   custom: "Custom System",
+  disqualified: "Disqualified",
   tbd: "TBD",
+};
+
+const confidenceColor = (c: number) => {
+  if (c > 70) return "bg-emerald-500/10 text-emerald-500";
+  if (c >= 40) return "bg-yellow-500/10 text-yellow-500";
+  return "bg-destructive/10 text-destructive";
 };
 
 export default function LeadInbox() {
@@ -395,10 +406,20 @@ export default function LeadInbox() {
               <div key={lead.id} className="bg-card border border-border rounded-lg overflow-hidden">
                 {/* Row */}
                 <div className="flex items-center gap-4 px-4 py-3">
-                  {/* Score */}
-                  <span className={`text-sm font-bold px-2.5 py-1 rounded ${scoreColor(lead.score)}`}>
-                    {lead.score}
-                  </span>
+                  {/* Circular Score */}
+                  <div className="relative flex-shrink-0 h-10 w-10">
+                    <svg viewBox="0 0 36 36" className="h-10 w-10 -rotate-90">
+                      <circle cx="18" cy="18" r="15.915" fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
+                      <circle
+                        cx="18" cy="18" r="15.915" fill="none"
+                        stroke={lead.score >= 80 ? "hsl(var(--success))" : lead.score >= 65 ? "hsl(var(--warning))" : "hsl(var(--muted-foreground))"}
+                        strokeWidth="3"
+                        strokeDasharray={`${lead.score} ${100 - lead.score}`}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-foreground">{lead.score}</span>
+                  </div>
 
                   {/* Main info */}
                   <div className="flex-1 min-w-0">
@@ -414,17 +435,10 @@ export default function LeadInbox() {
                     <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
                       {raw?.category && <span>{raw.category}</span>}
                       {raw?.city && <span>📍 {raw.city}, {raw?.country}</span>}
-                      {enrich?.decision_maker_name && (
+                      {raw?.phone && (
                         <span className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          {enrich.decision_maker_name}
-                          {enrich.decision_maker_role && ` · ${enrich.decision_maker_role}`}
-                        </span>
-                      )}
-                      {enrich?.verified_email && (
-                        <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {enrich.verified_email}
+                          <Phone className="h-3 w-3" />
+                          {raw.phone}
                         </span>
                       )}
                     </div>
@@ -476,39 +490,97 @@ export default function LeadInbox() {
                 {/* Expanded detail */}
                 {isExpanded && (
                   <div className="px-4 pb-4 border-t border-border pt-3 space-y-4">
+                    {/* Contact Info Row */}
+                    <div className="flex items-center gap-4 flex-wrap text-sm">
+                      {raw?.phone && (
+                        <span className="flex items-center gap-1.5 text-foreground">
+                          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                          {raw.phone}
+                        </span>
+                      )}
+                      {raw?.address && (
+                        <span className="flex items-center gap-1.5 text-foreground">
+                          <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                          {raw.address}
+                        </span>
+                      )}
+                    </div>
+
                     {/* Decision Maker */}
                     {enrich?.decision_maker_name && (
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-1.5">Decision Maker</p>
                         <div className="flex items-center gap-3 flex-wrap">
-                          <span className="flex items-center gap-1.5 text-sm text-foreground">
-                            <User className="h-3.5 w-3.5" />
-                            {enrich.decision_maker_name}
-                            {enrich.decision_maker_role && <span className="text-muted-foreground">· {enrich.decision_maker_role}</span>}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                              <User className="h-3.5 w-3.5" />
+                              {enrich.decision_maker_name}
+                            </span>
+                            {enrich.decision_maker_role && (
+                              <span className="text-xs text-muted-foreground ml-5">{enrich.decision_maker_role}</span>
+                            )}
+                          </div>
                           {enrich.decision_maker_linkedin && (
                             <a href={enrich.decision_maker_linkedin} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
                               <Linkedin className="h-3 w-3" /> LinkedIn
                             </a>
                           )}
-                          {enrich.verified_email && (
-                            <span className="flex items-center gap-1.5 text-sm">
-                              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                              {enrich.verified_email}
-                              {enrich.email_is_personal === true && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/10 text-success font-medium">Personal email</span>
-                              )}
-                              {enrich.email_is_personal === false && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">Generic email</span>
-                              )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Email with confidence */}
+                    {enrich?.verified_email && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5">Email</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="flex items-center gap-1.5 text-sm text-foreground">
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                            {enrich.verified_email}
+                          </span>
+                          {enrich.email_confidence != null && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${confidenceColor(enrich.email_confidence)}`}>
+                              {enrich.email_confidence}% confidence
                             </span>
                           )}
-                          {enrich.email_confidence != null && (
-                            <span className="text-xs text-muted-foreground">{enrich.email_confidence}% confidence</span>
+                          {enrich.email_is_personal === true && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-medium">Personal</span>
+                          )}
+                          {enrich.email_is_personal === false && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-medium">Generic</span>
                           )}
                         </div>
                       </div>
                     )}
+
+                    {/* Social Links as icon buttons */}
+                    <div className="flex items-center gap-2">
+                      {raw?.website && (
+                        <a href={raw.website} target="_blank" rel="noreferrer" className="p-2 rounded bg-muted hover:bg-accent transition-colors" title="Website">
+                          <Globe className="h-4 w-4 text-foreground" />
+                        </a>
+                      )}
+                      {enrich?.instagram_url && (
+                        <a href={enrich.instagram_url} target="_blank" rel="noreferrer" className="p-2 rounded bg-muted hover:bg-accent transition-colors" title="Instagram">
+                          <Instagram className="h-4 w-4 text-foreground" />
+                        </a>
+                      )}
+                      {enrich?.facebook_url && (
+                        <a href={enrich.facebook_url} target="_blank" rel="noreferrer" className="p-2 rounded bg-muted hover:bg-accent transition-colors" title="Facebook">
+                          <Facebook className="h-4 w-4 text-foreground" />
+                        </a>
+                      )}
+                      {enrich?.linkedin_company_url && (
+                        <a href={enrich.linkedin_company_url} target="_blank" rel="noreferrer" className="p-2 rounded bg-muted hover:bg-accent transition-colors" title="Company LinkedIn">
+                          <Linkedin className="h-4 w-4 text-foreground" />
+                        </a>
+                      )}
+                      {enrich?.decision_maker_linkedin && (
+                        <a href={enrich.decision_maker_linkedin} target="_blank" rel="noreferrer" className="p-2 rounded bg-primary/10 hover:bg-primary/20 transition-colors" title="Decision Maker LinkedIn">
+                          <User className="h-4 w-4 text-primary" />
+                        </a>
+                      )}
+                    </div>
 
                     {/* Company Intelligence */}
                     <div>
@@ -524,7 +596,7 @@ export default function LeadInbox() {
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">⚠ Uses AI tools</span>
                         )}
                         {enrich?.uses_ai_tools === false && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/10 text-success font-medium">✓ No AI detected</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-medium">✓ No AI detected</span>
                         )}
                         <span className="text-sm">
                           {enrich?.works_digitally ? "✓ Digital business" : "✗ Unclear if digital"}
@@ -538,47 +610,33 @@ export default function LeadInbox() {
                           ))}
                         </div>
                       )}
-                      <div className="flex items-center gap-2 mt-2">
-                        {raw?.website && (
-                          <a href={raw.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-muted text-foreground hover:bg-accent transition-colors">
-                            <Globe className="h-3 w-3" /> Website
-                          </a>
-                        )}
-                        {enrich?.instagram_url && (
-                          <a href={enrich.instagram_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-muted text-foreground hover:bg-accent transition-colors">
-                            <Instagram className="h-3 w-3" /> Instagram
-                          </a>
-                        )}
-                        {enrich?.facebook_url && (
-                          <a href={enrich.facebook_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-muted text-foreground hover:bg-accent transition-colors">
-                            <Facebook className="h-3 w-3" /> Facebook
-                          </a>
-                        )}
-                        {enrich?.linkedin_company_url && (
-                          <a href={enrich.linkedin_company_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-muted text-foreground hover:bg-accent transition-colors">
-                            <Linkedin className="h-3 w-3" /> Company
-                          </a>
-                        )}
-                      </div>
                     </div>
 
-                    {/* Why they fit + Outreach angle + Summary */}
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Why they fit</p>
-                        <p className="text-sm text-foreground">{lead.fit_reason}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Outreach angle</p>
-                        <p className="text-sm text-foreground italic">"{lead.outreach_angle}"</p>
-                      </div>
-                      {enrich?.website_summary && (
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Business summary</p>
-                          <p className="text-sm text-foreground">{enrich.website_summary}</p>
-                        </div>
-                      )}
+                    {/* Why they fit */}
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Why they fit</p>
+                      <p className="text-sm text-foreground">{lead.fit_reason}</p>
                     </div>
+
+                    {/* Suggested Outreach — collapsible */}
+                    {lead.outreach_angle && (
+                      <details className="group">
+                        <summary className="text-xs font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors">
+                          Suggested Outreach <ChevronDown className="h-3 w-3 inline ml-0.5 group-open:rotate-180 transition-transform" />
+                        </summary>
+                        <p className="text-sm text-foreground italic mt-1.5 pl-2 border-l-2 border-primary/30">
+                          "{lead.outreach_angle}"
+                        </p>
+                      </details>
+                    )}
+
+                    {/* Business summary */}
+                    {enrich?.website_summary && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Business summary</p>
+                        <p className="text-sm text-foreground">{enrich.website_summary}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
