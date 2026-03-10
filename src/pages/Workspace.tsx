@@ -92,7 +92,13 @@ const noteBorderColor: Record<string, string> = {
   green: "border-l-success",
   red: "border-l-destructive",
 };
-const noteColorCycle: Record<string, Note["color"]> = { yellow: "blue", blue: "green", green: "red", red: "yellow" };
+const allNoteColors: Note["color"][] = ["yellow", "blue", "green", "red"];
+const noteColorDot: Record<string, string> = {
+  yellow: "bg-warning",
+  blue: "bg-stage-outreach",
+  green: "bg-success",
+  red: "bg-destructive",
+};
 
 // ── File icon helper ──────────────────────────────
 function FileIcon({ type }: { type: WorkspaceFile["fileType"] }) {
