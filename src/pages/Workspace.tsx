@@ -3,10 +3,10 @@ import { format } from "date-fns";
 import {
   Plus, Trash2, Pin, PinOff, Check, ChevronDown, ChevronRight,
   Globe, ExternalLink, Upload, Download,
-  FileText, FileImage, FileSpreadsheet, File, X,
+  FileText, FileImage, FileSpreadsheet, File, X, GripVertical,
 } from "lucide-react";
 import {
-  useWorkspaceTasks, useCreateTask, useUpdateTask, useDeleteTask,
+  useWorkspaceTasks, useCreateTask, useUpdateTask, useDeleteTask, useReorderTasks,
   useWorkspaceNotes, useCreateNote, useUpdateNote, useDeleteNote,
   useWorkspaceLinks, useCreateLink, useDeleteLink,
   useWeeklyFocus, useUpdateWeeklyFocus,
