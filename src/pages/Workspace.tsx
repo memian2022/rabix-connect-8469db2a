@@ -308,9 +308,6 @@ export default function Workspace() {
                 <div key={note.id} className={`bg-accent/20 border border-border rounded p-4 border-l-[3px] ${noteBorderColor[note.color]} relative group`}>
                   {/* Top actions */}
                   <div className="absolute top-2 right-2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => updateNote(note.id, { color: noteColorCycle[note.color] })} className="p-1 hover:bg-accent rounded" title="Change color">
-                      <div className={`w-3 h-3 rounded-full ${noteBorderColor[noteColorCycle[note.color]].replace("border-l-", "bg-")}`} />
-                    </button>
                     <button onClick={() => updateNote(note.id, { pinned: !note.pinned })} className="p-1 hover:bg-accent rounded" title={note.pinned ? "Unpin" : "Pin"}>
                       {note.pinned ? <PinOff className="h-3 w-3 text-muted-foreground" /> : <Pin className="h-3 w-3 text-muted-foreground" />}
                     </button>
@@ -319,6 +316,18 @@ export default function Workspace() {
                     </button>
                   </div>
                   {note.pinned && <Pin className="h-3 w-3 text-muted-foreground/50 absolute top-3 right-3 group-hover:opacity-0" />}
+
+                  {/* Color dots at bottom right on hover */}
+                  <div className="absolute bottom-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {allNoteColors.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => updateNote(note.id, { color: c })}
+                        className={`w-3 h-3 rounded-full ${noteColorDot[c]} transition-transform hover:scale-125 ${note.color === c ? "ring-1 ring-offset-1 ring-foreground/30" : ""}`}
+                        title={c}
+                      />
+                    ))}
+                  </div>
 
                   <input
                     value={note.title}
