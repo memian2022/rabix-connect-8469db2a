@@ -52,30 +52,10 @@ interface WorkspaceFile {
 }
 
 // ── Seed data ──────────────────────────────────────
-const seedTasks: Task[] = [
-  { id: "t1", text: "Follow up with Ahmed Al-Rashid on training proposal", done: false, priority: "high" },
-  { id: "t2", text: "Prepare discovery call agenda for Omar Farooq", done: false, priority: "medium" },
-  { id: "t3", text: "Review Priya Sharma's revised training scope", done: false, priority: "high" },
-  { id: "t4", text: "Send outreach batch to 5 new Sales Navigator leads", done: true, priority: "medium" },
-  { id: "t5", text: "Update CRM pipeline stages for Fatima Al-Zahra", done: true, priority: "low" },
-];
-
-const seedNotes: Note[] = [
-  { id: "n1", title: "AI Training Package Pricing", content: "Tier 1: 2-day workshop $8k\nTier 2: 5-day intensive $12k\nTier 3: Ongoing mentorship $15k/mo\n\nConsider adding a Tier 1.5 for 3-day option.", color: "yellow", pinned: true, date: "2026-02-26" },
-  { id: "n2", title: "FTA Group Call Notes", content: "Ahmed wants training for 20+ engineers. Key concerns: timeline, hands-on labs, certification. Follow up with curriculum draft.", color: "blue", pinned: false, date: "2026-02-25" },
-  { id: "n3", title: "Outreach Scripts to Test", content: "A/B test the new founding partner outreach vs. the consultative approach. Track reply rates per channel for 2 weeks.", color: "green", pinned: false, date: "2026-02-23" },
-];
-
-const seedLinks: QuickLink[] = [
-  { id: "l1", title: "Sales Navigator", url: "https://www.linkedin.com/sales", category: "tools" },
-  { id: "l2", title: "Calendly Booking Page", url: "https://calendly.com/rabix-ammaz", category: "tools" },
-  { id: "l3", title: "AI Industry Report 2026", url: "https://example.com/ai-report-2026", category: "research" },
-];
-
-const seedFiles: WorkspaceFile[] = [
-  { id: "f1", name: "Rabix Service Deck 2026.pdf", uploadDate: "2026-02-20", fileSize: "3.2 MB", fileType: "pdf" },
-  { id: "f2", name: "Client ROI Calculator.xlsx", uploadDate: "2026-02-18", fileSize: "890 KB", fileType: "spreadsheet" },
-];
+const seedTasks: Task[] = [];
+const seedNotes: Note[] = [];
+const seedLinks: QuickLink[] = [];
+const seedFiles: WorkspaceFile[] = [];
 
 // ── Priority helpers ──────────────────────────────
 const priorityDotColor: Record<string, string> = {
@@ -92,7 +72,13 @@ const noteBorderColor: Record<string, string> = {
   green: "border-l-success",
   red: "border-l-destructive",
 };
-const noteColorCycle: Record<string, Note["color"]> = { yellow: "blue", blue: "green", green: "red", red: "yellow" };
+const allNoteColors: Note["color"][] = ["yellow", "blue", "green", "red"];
+const noteColorDot: Record<string, string> = {
+  yellow: "bg-warning",
+  blue: "bg-stage-outreach",
+  green: "bg-success",
+  red: "bg-destructive",
+};
 
 // ── File icon helper ──────────────────────────────
 function FileIcon({ type }: { type: WorkspaceFile["fileType"] }) {
@@ -322,9 +308,6 @@ export default function Workspace() {
                 <div key={note.id} className={`bg-accent/20 border border-border rounded p-4 border-l-[3px] ${noteBorderColor[note.color]} relative group`}>
                   {/* Top actions */}
                   <div className="absolute top-2 right-2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => updateNote(note.id, { color: noteColorCycle[note.color] })} className="p-1 hover:bg-accent rounded" title="Change color">
-                      <div className={`w-3 h-3 rounded-full ${noteBorderColor[noteColorCycle[note.color]].replace("border-l-", "bg-")}`} />
-                    </button>
                     <button onClick={() => updateNote(note.id, { pinned: !note.pinned })} className="p-1 hover:bg-accent rounded" title={note.pinned ? "Unpin" : "Pin"}>
                       {note.pinned ? <PinOff className="h-3 w-3 text-muted-foreground" /> : <Pin className="h-3 w-3 text-muted-foreground" />}
                     </button>
@@ -333,6 +316,18 @@ export default function Workspace() {
                     </button>
                   </div>
                   {note.pinned && <Pin className="h-3 w-3 text-muted-foreground/50 absolute top-3 right-3 group-hover:opacity-0" />}
+
+                  {/* Color dots at bottom right on hover */}
+                  <div className="absolute bottom-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {allNoteColors.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => updateNote(note.id, { color: c })}
+                        className={`w-3 h-3 rounded-full ${noteColorDot[c]} transition-transform hover:scale-125 ${note.color === c ? "ring-1 ring-offset-1 ring-foreground/30" : ""}`}
+                        title={c}
+                      />
+                    ))}
+                  </div>
 
                   <input
                     value={note.title}
