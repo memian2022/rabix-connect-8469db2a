@@ -83,6 +83,21 @@ export function useUpdateTask() {
   })
 }
 
+export function useReorderTasks() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (tasks: { id: string; sort_order: number }[]) => {
+      const updates = tasks.map(t =>
+        supabase.from('workspace_tasks').update({ sort_order: t.sort_order }).eq('id', t.id)
+      )
+      const results = await Promise.all(updates)
+      const err = results.find(r => r.error)
+      if (err?.error) throw err.error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace_tasks'] }),
+  })
+}
+
 export function useDeleteTask() {
   const qc = useQueryClient()
   return useMutation({
