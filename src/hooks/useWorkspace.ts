@@ -7,6 +7,7 @@ export interface WorkspaceTask {
   text: string
   done: boolean
   priority: 'high' | 'medium' | 'low'
+  sort_order: number
 }
 
 export interface WorkspaceNote {
