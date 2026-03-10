@@ -7,6 +7,7 @@ export interface WorkspaceTask {
   text: string
   done: boolean
   priority: 'high' | 'medium' | 'low'
+  sort_order: number
 }
 
 export interface WorkspaceNote {
@@ -41,13 +42,15 @@ export function useWorkspaceTasks() {
       const { data, error } = await supabase
         .from('workspace_tasks')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
       if (error) throw error
       return (data ?? []).map((r: any): WorkspaceTask => ({
         id: r.id,
         text: r.text,
         done: r.done,
         priority: r.priority,
+        sort_order: r.sort_order ?? 0,
       }))
     },
   })
@@ -61,6 +64,7 @@ export function useCreateTask() {
         text: task.text,
         done: task.done,
         priority: task.priority,
+        sort_order: task.sort_order,
       })
       if (error) throw error
     },
@@ -74,6 +78,21 @@ export function useUpdateTask() {
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<WorkspaceTask> }) => {
       const { error } = await supabase.from('workspace_tasks').update(updates).eq('id', id)
       if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace_tasks'] }),
+  })
+}
+
+export function useReorderTasks() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (tasks: { id: string; sort_order: number }[]) => {
+      const updates = tasks.map(t =>
+        supabase.from('workspace_tasks').update({ sort_order: t.sort_order }).eq('id', t.id)
+      )
+      const results = await Promise.all(updates)
+      const err = results.find(r => r.error)
+      if (err?.error) throw err.error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace_tasks'] }),
   })

@@ -3,10 +3,10 @@ import { format } from "date-fns";
 import {
   Plus, Trash2, Pin, PinOff, Check, ChevronDown, ChevronRight,
   Globe, ExternalLink, Upload, Download,
-  FileText, FileImage, FileSpreadsheet, File, X,
+  FileText, FileImage, FileSpreadsheet, File, X, GripVertical,
 } from "lucide-react";
 import {
-  useWorkspaceTasks, useCreateTask, useUpdateTask, useDeleteTask,
+  useWorkspaceTasks, useCreateTask, useUpdateTask, useDeleteTask, useReorderTasks,
   useWorkspaceNotes, useCreateNote, useUpdateNote, useDeleteNote,
   useWorkspaceLinks, useCreateLink, useDeleteLink,
   useWeeklyFocus, useUpdateWeeklyFocus,
@@ -63,6 +63,7 @@ export default function Workspace() {
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
+  const reorderTasks = useReorderTasks();
 
   const { data: notes = [], isLoading: loadingNotes } = useWorkspaceNotes();
   const createNote = useCreateNote();
@@ -106,8 +107,42 @@ export default function Workspace() {
   // ── Handlers ───────────────────────────────────
   const handleAddTask = () => {
     if (!newTaskText.trim()) return;
-    createTask.mutate({ text: newTaskText.trim(), done: false, priority: "medium" });
+    const maxOrder = tasks.length > 0 ? Math.max(...tasks.map(t => t.sort_order)) : 0;
+    createTask.mutate({ text: newTaskText.trim(), done: false, priority: "medium", sort_order: maxOrder + 1 });
     setNewTaskText("");
+  };
+
+  // ── Drag-and-drop ─────────────────────────────
+  const dragTaskId = useRef<string | null>(null);
+  const dragOverTaskId = useRef<string | null>(null);
+
+  const handleDragStart = (id: string) => {
+    dragTaskId.current = id;
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    dragOverTaskId.current = id;
+  };
+
+  const handleDrop = () => {
+    const fromId = dragTaskId.current;
+    const toId = dragOverTaskId.current;
+    if (!fromId || !toId || fromId === toId) return;
+
+    const reordered = [...activeTasks];
+    const fromIdx = reordered.findIndex(t => t.id === fromId);
+    const toIdx = reordered.findIndex(t => t.id === toId);
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+
+    const updates = reordered.map((t, i) => ({ id: t.id, sort_order: i }));
+    reorderTasks.mutate(updates);
+
+    dragTaskId.current = null;
+    dragOverTaskId.current = null;
   };
 
   const handleAddNote = () => {
@@ -208,7 +243,15 @@ export default function Workspace() {
                   <p className="text-sm text-muted-foreground text-center py-6">Plan your day. Add your first task.</p>
                 )}
                 {activeTasks.map((task) => (
-                  <div key={task.id} className="flex items-center gap-3 px-2 py-2 rounded hover:bg-accent/30 transition-colors group">
+                  <div
+                    key={task.id}
+                    draggable
+                    onDragStart={() => handleDragStart(task.id)}
+                    onDragOver={(e) => handleDragOver(e, task.id)}
+                    onDrop={handleDrop}
+                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-accent/30 transition-colors group"
+                  >
+                    <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 cursor-grab active:cursor-grabbing shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                     <button onClick={() => updateTask.mutate({ id: task.id, updates: { done: true } })} className="w-[18px] h-[18px] rounded border-2 border-border hover:border-primary flex items-center justify-center shrink-0 transition-colors" />
                     {editingTaskId === task.id ? (
                       <input
