@@ -107,8 +107,42 @@ export default function Workspace() {
   // ── Handlers ───────────────────────────────────
   const handleAddTask = () => {
     if (!newTaskText.trim()) return;
-    createTask.mutate({ text: newTaskText.trim(), done: false, priority: "medium" });
+    const maxOrder = tasks.length > 0 ? Math.max(...tasks.map(t => t.sort_order)) : 0;
+    createTask.mutate({ text: newTaskText.trim(), done: false, priority: "medium", sort_order: maxOrder + 1 });
     setNewTaskText("");
+  };
+
+  // ── Drag-and-drop ─────────────────────────────
+  const dragTaskId = useRef<string | null>(null);
+  const dragOverTaskId = useRef<string | null>(null);
+
+  const handleDragStart = (id: string) => {
+    dragTaskId.current = id;
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    dragOverTaskId.current = id;
+  };
+
+  const handleDrop = () => {
+    const fromId = dragTaskId.current;
+    const toId = dragOverTaskId.current;
+    if (!fromId || !toId || fromId === toId) return;
+
+    const reordered = [...activeTasks];
+    const fromIdx = reordered.findIndex(t => t.id === fromId);
+    const toIdx = reordered.findIndex(t => t.id === toId);
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+
+    const updates = reordered.map((t, i) => ({ id: t.id, sort_order: i }));
+    reorderTasks.mutate(updates);
+
+    dragTaskId.current = null;
+    dragOverTaskId.current = null;
   };
 
   const handleAddNote = () => {
