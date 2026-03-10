@@ -63,6 +63,7 @@ export default function Workspace() {
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
+  const reorderTasks = useReorderTasks();
 
   const { data: notes = [], isLoading: loadingNotes } = useWorkspaceNotes();
   const createNote = useCreateNote();
