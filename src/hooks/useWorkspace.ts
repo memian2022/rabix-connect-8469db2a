@@ -64,6 +64,7 @@ export function useCreateTask() {
         text: task.text,
         done: task.done,
         priority: task.priority,
+        sort_order: task.sort_order,
       })
       if (error) throw error
     },
