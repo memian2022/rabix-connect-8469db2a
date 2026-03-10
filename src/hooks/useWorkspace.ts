@@ -42,13 +42,15 @@ export function useWorkspaceTasks() {
       const { data, error } = await supabase
         .from('workspace_tasks')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
       if (error) throw error
       return (data ?? []).map((r: any): WorkspaceTask => ({
         id: r.id,
         text: r.text,
         done: r.done,
         priority: r.priority,
+        sort_order: r.sort_order ?? 0,
       }))
     },
   })
