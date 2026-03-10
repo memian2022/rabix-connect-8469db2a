@@ -30,8 +30,9 @@ export default function AppSidebar() {
     <aside className="fixed left-0 top-0 bottom-0 w-60 bg-sidebar flex flex-col z-50">
       {/* Logo */}
       <div className="px-6 py-5 border-b border-sidebar-border">
-        <h1 className="text-lg font-bold text-sidebar-foreground tracking-tight">
-          Rabix Technologies
+        <h1 className="text-lg font-bold tracking-tight">
+          <span className="text-sidebar-foreground">Rabix</span>{" "}
+          <span className="text-[hsl(var(--sidebar-primary))] italic">Technologies</span>
         </h1>
         <span className="text-xs text-sidebar-muted uppercase tracking-widest">
           CRM
