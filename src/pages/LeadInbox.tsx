@@ -562,6 +562,9 @@ export default function LeadInbox() {
                         {lead.stage === "approved" && (
                           <span className="text-xs font-medium px-2 py-0.5 rounded bg-success/10 text-success">Approved ✓</span>
                         )}
+                        {lead.stage === "outreached" && (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded bg-primary/10 text-primary">Outreached ✉</span>
+                        )}
                         {lead.stage === "disqualified" && (
                           <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-muted-foreground">Rejected</span>
                         )}
