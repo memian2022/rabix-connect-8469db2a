@@ -171,6 +171,15 @@ export default function LeadInbox() {
     },
   });
 
+  const { data: outreachedLeads = [] } = useQuery({
+    queryKey: ["outreached_leads"],
+    queryFn: async () => {
+      const res = await fetch(`${AGENT_URL}/leads/qualified?limit=1000&stage=outreached`);
+      if (!res.ok) return [];
+      return res.json() as Promise<QualifiedLead[]>;
+    },
+  });
+
   const { data: stats, error: statsError } = useQuery({
     queryKey: ["agent_stats"],
     queryFn: async () => {
