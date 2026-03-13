@@ -416,7 +416,7 @@ export default function LeadInbox() {
       {/* Controls */}
       <div className="flex items-center justify-between">
         <div className="flex gap-1">
-          {(["pending", "approved", "rejected", "all"] as const).map((tab) => (
+          {(["pending", "approved", "outreached", "rejected", "all"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -424,7 +424,7 @@ export default function LeadInbox() {
                 activeTab === tab ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground hover:bg-accent"
               }`}
             >
-              {tab === "pending" ? `Pending (${leads.length})` : tab === "approved" ? `Approved (${approvedLeads.length})` : tab === "rejected" ? `Rejected (${rejectedLeads.length})` : "All"}
+              {tab === "pending" ? `Pending (${leads.length})` : tab === "approved" ? `Approved (${approvedLeads.length})` : tab === "rejected" ? `Rejected (${rejectedLeads.length})` : tab === "outreached" ? `Outreached (${outreachedLeads.length})` : "All"}
             </button>
           ))}
         </div>
