@@ -19,7 +19,9 @@ import {
   ExternalLink,
   Phone,
   MapPin,
+  Send,
 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { formatDistanceToNow, isToday, isYesterday, differenceInMinutes, format } from "date-fns";
