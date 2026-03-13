@@ -351,7 +351,7 @@ export default function LeadInbox() {
   };
 
   const effectiveLeads = leads.length > 0 ? leads : supabaseLeads;
-  const unsortedLeads = activeTab === "pending" ? effectiveLeads : activeTab === "approved" ? approvedLeads : activeTab === "rejected" ? rejectedLeads : [...effectiveLeads, ...approvedLeads, ...rejectedLeads];
+  const unsortedLeads = activeTab === "pending" ? effectiveLeads : activeTab === "approved" ? approvedLeads : activeTab === "rejected" ? rejectedLeads : activeTab === "outreached" ? outreachedLeads : [...effectiveLeads, ...approvedLeads, ...rejectedLeads, ...outreachedLeads];
 
   const sortedAndGrouped = useMemo(() => {
     const sorted = [...unsortedLeads].sort((a, b) => {
