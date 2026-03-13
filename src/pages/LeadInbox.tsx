@@ -19,7 +19,9 @@ import {
   ExternalLink,
   Phone,
   MapPin,
+  Send,
 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { formatDistanceToNow, isToday, isYesterday, differenceInMinutes, format } from "date-fns";
@@ -100,7 +102,7 @@ const confidenceColor = (c: number) => {
 export default function LeadInbox() {
   const qc = useQueryClient();
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "rejected" | "all">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "rejected" | "outreached" | "all">("pending");
   const [scrapeOpen, setScrapeOpen] = useState(false);
   const [scrapeForm, setScrapeForm] = useState({ query: "", city: "", country: "Pakistan", max_results: 30 });
   const [jobStatus, setJobStatus] = useState<string | null>(null);
@@ -169,6 +171,15 @@ export default function LeadInbox() {
     },
   });
 
+  const { data: outreachedLeads = [] } = useQuery({
+    queryKey: ["outreached_leads"],
+    queryFn: async () => {
+      const res = await fetch(`${AGENT_URL}/leads/qualified?limit=1000&stage=outreached`);
+      if (!res.ok) return [];
+      return res.json() as Promise<QualifiedLead[]>;
+    },
+  });
+
   const { data: stats, error: statsError } = useQuery({
     queryKey: ["agent_stats"],
     queryFn: async () => {
@@ -214,6 +225,36 @@ export default function LeadInbox() {
       qc.invalidateQueries({ queryKey: ["qualified_leads"] });
       qc.invalidateQueries({ queryKey: ["rejected_leads"] });
       qc.invalidateQueries({ queryKey: ["agent_stats"] });
+    },
+  });
+
+  const outreachMutation = useMutation({
+    mutationFn: async (lead: QualifiedLead) => {
+      const res = await fetch(`${AGENT_URL}/leads/outreach`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qualified_lead_id: lead.id }),
+      });
+      if (!res.ok) throw new Error("Failed to send outreach");
+      return { response: await res.json(), lead };
+    },
+    onSuccess: ({ lead }) => {
+      const email = lead.enriched_leads?.verified_email || "lead";
+      toast({
+        title: "Email sent",
+        description: `Email sent to ${email}`,
+        variant: "default",
+      });
+      qc.invalidateQueries({ queryKey: ["approved_leads"] });
+      qc.invalidateQueries({ queryKey: ["outreached_leads"] });
+      qc.invalidateQueries({ queryKey: ["agent_stats"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Outreach failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
     },
   });
 
@@ -310,7 +351,7 @@ export default function LeadInbox() {
   };
 
   const effectiveLeads = leads.length > 0 ? leads : supabaseLeads;
-  const unsortedLeads = activeTab === "pending" ? effectiveLeads : activeTab === "approved" ? approvedLeads : activeTab === "rejected" ? rejectedLeads : [...effectiveLeads, ...approvedLeads, ...rejectedLeads];
+  const unsortedLeads = activeTab === "pending" ? effectiveLeads : activeTab === "approved" ? approvedLeads : activeTab === "rejected" ? rejectedLeads : activeTab === "outreached" ? outreachedLeads : [...effectiveLeads, ...approvedLeads, ...rejectedLeads, ...outreachedLeads];
 
   const sortedAndGrouped = useMemo(() => {
     const sorted = [...unsortedLeads].sort((a, b) => {
@@ -375,7 +416,7 @@ export default function LeadInbox() {
       {/* Controls */}
       <div className="flex items-center justify-between">
         <div className="flex gap-1">
-          {(["pending", "approved", "rejected", "all"] as const).map((tab) => (
+          {(["pending", "approved", "outreached", "rejected", "all"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -383,7 +424,7 @@ export default function LeadInbox() {
                 activeTab === tab ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground hover:bg-accent"
               }`}
             >
-              {tab === "pending" ? `Pending (${leads.length})` : tab === "approved" ? `Approved (${approvedLeads.length})` : tab === "rejected" ? `Rejected (${rejectedLeads.length})` : "All"}
+              {tab === "pending" ? `Pending (${leads.length})` : tab === "approved" ? `Approved (${approvedLeads.length})` : tab === "rejected" ? `Rejected (${rejectedLeads.length})` : tab === "outreached" ? `Outreached (${outreachedLeads.length})` : "All"}
             </button>
           ))}
         </div>
@@ -521,6 +562,9 @@ export default function LeadInbox() {
                         {lead.stage === "approved" && (
                           <span className="text-xs font-medium px-2 py-0.5 rounded bg-success/10 text-success">Approved ✓</span>
                         )}
+                        {lead.stage === "outreached" && (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded bg-primary/10 text-primary">Outreached ✉</span>
+                        )}
                         {lead.stage === "disqualified" && (
                           <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-muted-foreground">Rejected</span>
                         )}
@@ -537,6 +581,17 @@ export default function LeadInbox() {
                                 Approve
                               </button>
                             </>
+                          )}
+                          {lead.stage === "approved" && (
+                            <button
+                              onClick={() => outreachMutation.mutate(lead)}
+                              disabled={outreachMutation.isPending}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-xs font-medium rounded hover:bg-primary/20 transition-colors disabled:opacity-50"
+                              title="Send outreach email"
+                            >
+                              <Send className="h-3.5 w-3.5" />
+                              {outreachMutation.isPending ? "Sending..." : "Send Outreach"}
+                            </button>
                           )}
                           <button onClick={() => setExpanded(isExpanded ? null : lead.id)} className="p-1.5 hover:bg-accent rounded transition-colors">
                             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
