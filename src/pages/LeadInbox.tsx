@@ -102,7 +102,7 @@ const confidenceColor = (c: number) => {
 export default function LeadInbox() {
   const qc = useQueryClient();
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "rejected" | "all">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "rejected" | "outreached" | "all">("pending");
   const [scrapeOpen, setScrapeOpen] = useState(false);
   const [scrapeForm, setScrapeForm] = useState({ query: "", city: "", country: "Pakistan", max_results: 30 });
   const [jobStatus, setJobStatus] = useState<string | null>(null);
