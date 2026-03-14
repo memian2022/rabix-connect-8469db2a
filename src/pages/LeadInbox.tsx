@@ -832,6 +832,59 @@ export default function LeadInbox() {
           </div>
         </div>
       )}
+
+      {/* Outreach Preview Modal */}
+      {previewModal && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-card border border-border rounded-xl p-6 w-full max-w-lg space-y-4 shadow-lg">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-foreground">Preview Outreach Email</p>
+              <button onClick={() => setPreviewModal(null)} className="p-1.5 hover:bg-accent rounded">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm">
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">To:</span>
+              <span className="text-foreground font-medium">{previewModal.email}</span>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Subject</label>
+              <input
+                value={previewModal.subject}
+                onChange={(e) => setPreviewModal((prev) => prev ? { ...prev, subject: e.target.value } : null)}
+                className="mt-1 w-full h-9 px-3 bg-background border border-border rounded text-sm text-foreground focus:outline-none focus:border-primary"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Body</label>
+              <textarea
+                value={previewModal.body}
+                onChange={(e) => setPreviewModal((prev) => prev ? { ...prev, body: e.target.value } : null)}
+                rows={10}
+                className="mt-1 w-full px-3 py-2 bg-background border border-border rounded text-sm text-foreground focus:outline-none focus:border-primary font-mono leading-relaxed resize-y"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setPreviewModal(null)} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={() => outreachMutation.mutate({ lead: previewModal.lead })}
+                disabled={outreachMutation.isPending}
+                className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:opacity-90 disabled:opacity-50"
+              >
+                <Send className="h-3.5 w-3.5" />
+                {outreachMutation.isPending ? "Sending..." : "Send"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
