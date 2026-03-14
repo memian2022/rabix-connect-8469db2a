@@ -230,8 +230,31 @@ export default function LeadInbox() {
     },
   });
 
+  const previewOutreach = async (lead: QualifiedLead) => {
+    setPreviewLoading(true);
+    try {
+      const res = await fetch(`${AGENT_URL}/leads/preview-outreach`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qualified_lead_id: lead.id }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setPreviewModal({
+        lead,
+        subject: data.subject || "",
+        body: data.body || "",
+        email: data.email || lead.enriched_leads?.verified_email || "unknown",
+      });
+    } catch (err) {
+      toast({ title: "Preview failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   const outreachMutation = useMutation({
-    mutationFn: async (lead: QualifiedLead) => {
+    mutationFn: async ({ lead }: { lead: QualifiedLead }) => {
       const res = await fetch(`${AGENT_URL}/leads/outreach`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -241,22 +264,15 @@ export default function LeadInbox() {
       return { response: await res.json(), lead };
     },
     onSuccess: ({ lead }) => {
-      const email = lead.enriched_leads?.verified_email || "lead";
-      toast({
-        title: "Email sent",
-        description: `Email sent to ${email}`,
-        variant: "default",
-      });
+      const email = previewModal?.email || lead.enriched_leads?.verified_email || "lead";
+      toast({ title: "Email sent", description: `Email sent to ${email}`, variant: "default" });
+      setPreviewModal(null);
       qc.invalidateQueries({ queryKey: ["approved_leads"] });
       qc.invalidateQueries({ queryKey: ["outreached_leads"] });
       qc.invalidateQueries({ queryKey: ["agent_stats"] });
     },
     onError: (error) => {
-      toast({
-        title: "Outreach failed",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive",
-      });
+      toast({ title: "Outreach failed", description: error instanceof Error ? error.message : "Unknown error", variant: "destructive" });
     },
   });
 
