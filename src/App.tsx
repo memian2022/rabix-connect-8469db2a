@@ -12,6 +12,7 @@ import Outreach from "./pages/Outreach";
 import Reports from "./pages/Reports";
 import Workspace from "./pages/Workspace";
 import LeadInbox from "./pages/LeadInbox";
+import Templates from "./pages/Templates";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
