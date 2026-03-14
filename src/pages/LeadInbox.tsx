@@ -247,7 +247,7 @@ export default function LeadInbox() {
         lead,
         subject: data.subject || "",
         body: data.body || "",
-        email: data.email || lead.enriched_leads?.verified_email || "unknown",
+        email: targetEmail || data.email || lead.enriched_leads?.verified_email || "unknown",
       });
     } catch (err) {
       toast({ title: "Preview failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
