@@ -113,6 +113,8 @@ export default function LeadInbox() {
   const [isJobRunning, setIsJobRunning] = useState(false);
   const [previewModal, setPreviewModal] = useState<{ lead: QualifiedLead; subject: string; body: string; email: string } | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [emailDropdown, setEmailDropdown] = useState<string | null>(null);
+  const [selectedEmails, setSelectedEmails] = useState<Record<string, string>>({});
   const pollRef = useRef<number | null>(null);
 
   const clearPolling = () => {
