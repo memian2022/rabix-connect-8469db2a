@@ -602,13 +602,13 @@ export default function LeadInbox() {
                           )}
                           {lead.stage === "approved" && (
                             <button
-                              onClick={() => outreachMutation.mutate(lead)}
-                              disabled={outreachMutation.isPending}
+                              onClick={() => previewOutreach(lead)}
+                              disabled={previewLoading}
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-xs font-medium rounded hover:bg-primary/20 transition-colors disabled:opacity-50"
-                              title="Send outreach email"
+                              title="Preview & send outreach email"
                             >
                               <Send className="h-3.5 w-3.5" />
-                              {outreachMutation.isPending ? "Sending..." : "Send Outreach"}
+                              {previewLoading ? "Loading..." : "Send Outreach"}
                             </button>
                           )}
                           <button onClick={() => setExpanded(isExpanded ? null : lead.id)} className="p-1.5 hover:bg-accent rounded transition-colors">
