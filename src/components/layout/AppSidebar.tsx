@@ -9,6 +9,7 @@ import {
   BarChart3,
   NotebookPen,
   Settings,
+  FileText,
 } from "lucide-react";
 
 const navItems = [
