@@ -9,6 +9,7 @@ import {
   BarChart3,
   NotebookPen,
   Settings,
+  FileText,
 } from "lucide-react";
 
 const navItems = [
@@ -18,6 +19,7 @@ const navItems = [
   { title: "Calendar", path: "/calendar", icon: CalendarDays },
   { title: "Outreach", path: "/outreach", icon: MessageSquare },
   { title: "Lead Inbox", path: "/leads", icon: Inbox },
+  { title: "Templates", path: "/templates", icon: FileText },
   { title: "Reports", path: "/reports", icon: BarChart3 },
   { title: "Workspace", path: "/workspace", icon: NotebookPen },
   { title: "Settings", path: "/settings", icon: Settings },
