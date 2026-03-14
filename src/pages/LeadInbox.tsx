@@ -660,14 +660,28 @@ export default function LeadInbox() {
                             </div>
                           )}
 
-                          {enrich?.verified_email && (
+                          {(enrich?.verified_email || (enrich?.all_emails && enrich.all_emails.length > 0)) && (
                             <div>
-                              <p className="text-xs font-medium text-muted-foreground mb-1.5">Email</p>
+                              <p className="text-xs font-medium text-muted-foreground mb-1.5">Emails</p>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="flex items-center gap-1.5 text-sm text-foreground">
-                                  <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                                  {enrich.verified_email}
-                                </span>
+                                {(enrich.all_emails && enrich.all_emails.length > 0 ? enrich.all_emails : [enrich.verified_email]).map((email) => {
+                                  const isPrimary = email === enrich.verified_email;
+                                  return (
+                                    <a
+                                      key={email}
+                                      href={`mailto:${email}`}
+                                      className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full transition-colors ${
+                                        isPrimary
+                                          ? "bg-primary/15 text-primary border border-primary/30 font-medium"
+                                          : "bg-muted text-foreground border border-border hover:bg-accent"
+                                      }`}
+                                    >
+                                      <Mail className="h-3 w-3" />
+                                      {email}
+                                      {isPrimary && <span className="text-[9px] uppercase tracking-wider opacity-70">Primary</span>}
+                                    </a>
+                                  );
+                                })}
                                 {enrich.email_confidence != null && (
                                   <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${confidenceColor(enrich.email_confidence)}`}>
                                     {enrich.email_confidence}% confidence
