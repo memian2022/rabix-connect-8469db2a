@@ -56,6 +56,7 @@ interface QualifiedLead {
     decision_maker_role: string;
     decision_maker_linkedin: string;
     verified_email: string;
+    all_emails: string[];
     email_confidence: number;
     email_is_personal: boolean;
     works_digitally: boolean;
