@@ -233,7 +233,7 @@ export default function LeadInbox() {
     },
   });
 
-  const previewOutreach = async (lead: QualifiedLead) => {
+  const previewOutreach = async (lead: QualifiedLead, targetEmail?: string) => {
     setPreviewLoading(true);
     try {
       const res = await fetch(`${AGENT_URL}/leads/preview-outreach`, {
