@@ -604,15 +604,56 @@ export default function LeadInbox() {
                             </>
                           )}
                           {lead.stage === "approved" && (
-                            <button
-                              onClick={() => previewOutreach(lead)}
-                              disabled={previewLoading}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-xs font-medium rounded hover:bg-primary/20 transition-colors disabled:opacity-50"
-                              title="Preview & send outreach email"
-                            >
-                              <Send className="h-3.5 w-3.5" />
-                              {previewLoading ? "Loading..." : "Send Outreach"}
-                            </button>
+                            <div className="relative">
+                              {enrich?.all_emails && enrich.all_emails.length > 1 ? (
+                                <>
+                                  <button
+                                    onClick={() => setEmailDropdown(emailDropdown === lead.id ? null : lead.id)}
+                                    disabled={previewLoading}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-xs font-medium rounded hover:bg-primary/20 transition-colors disabled:opacity-50"
+                                    title="Select email & preview outreach"
+                                  >
+                                    <Send className="h-3.5 w-3.5" />
+                                    {previewLoading ? "Loading..." : "Send Outreach"}
+                                    <ChevronDown className="h-3 w-3" />
+                                  </button>
+                                  {emailDropdown === lead.id && (
+                                    <div className="absolute right-0 top-full mt-1 z-20 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[240px]">
+                                      <p className="px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Select recipient</p>
+                                      {enrich.all_emails.map((email) => (
+                                        <button
+                                          key={email}
+                                          onClick={() => {
+                                            setSelectedEmails((prev) => ({ ...prev, [lead.id]: email }));
+                                            setEmailDropdown(null);
+                                            previewOutreach(lead, email);
+                                          }}
+                                          className={`w-full text-left px-3 py-1.5 text-xs hover:bg-accent transition-colors flex items-center gap-2 ${
+                                            email === enrich.verified_email ? "text-primary font-medium" : "text-foreground"
+                                          }`}
+                                        >
+                                          <Mail className="h-3 w-3 flex-shrink-0" />
+                                          {email}
+                                          {email === enrich.verified_email && (
+                                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary ml-auto">Primary</span>
+                                          )}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => previewOutreach(lead, enrich?.verified_email)}
+                                  disabled={previewLoading}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-xs font-medium rounded hover:bg-primary/20 transition-colors disabled:opacity-50"
+                                  title="Preview & send outreach email"
+                                >
+                                  <Send className="h-3.5 w-3.5" />
+                                  {previewLoading ? "Loading..." : "Send Outreach"}
+                                </button>
+                              )}
+                            </div>
                           )}
                           <button onClick={() => setExpanded(isExpanded ? null : lead.id)} className="p-1.5 hover:bg-accent rounded transition-colors">
                             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
